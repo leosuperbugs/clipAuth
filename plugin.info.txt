@@ -1,0 +1,7 @@
+base   clipauth
+author Tongyu Nie
+email  marktnie@gmail.com
+date   2018-09-28
+name   clipauth plugin
+desc   Customized auth plugin for iPaperClip
+url    https://ipaperclip.net
