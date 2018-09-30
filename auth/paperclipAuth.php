@@ -11,6 +11,13 @@ if (!defined('DOKU_INC')) {
     die();
 }
 
+$dir = dirname(__FILE__);
+require_once $dir . "/../vendor/autoload.php";
+use Doctrine\ORM\Tools\Setup;
+use Doctrine\ORM\EntityManager;
+
+
+
 class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
 {
 
@@ -36,16 +43,13 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
         $this->cando['external']    = true; // does the module do external auth checking?
 //        $this->cando['logout']      = true; // can the user logout again? (eg. not possible with HTTP auth)
         // connect to the MySQL
-        $servername = "localhost";
-        $username = "leo";
-        $password = "";
-        $dbname = "test";
 
-        $conn = new mysqli($servername,$username,$password);
-
-        if ($conn->connect_error) {
-            die("Connection failed: " . $conn->connect_error);
-        }
+//        include ('settings.php');
+//        $conn = new mysqli($settings['host'],$settings['username'],$settings['password']);
+//
+//        if ($conn->connect_error) {
+//            die("Connection failed: " . $conn->connect_error);
+//        }
 
         $this->success = true;
     }
@@ -104,7 +108,7 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
     {
         // FIXME implement password check
 
-        return false; // return true if okay
+        return true; // return true if okay
     }
 
     /**
@@ -125,6 +129,7 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
     public function getUserData($user, $requireGroups=true)
     {
         // FIXME implement
+
         return false;
     }
 
