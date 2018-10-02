@@ -9,7 +9,7 @@ $settings = [
     'port' => '3306',
     'username' => 'leo',
     'password' => '',
-    'dbname' => 'test'
+    'dbname' => 'test',
+    'charset' => 'utf8'
 ];
 
-?>

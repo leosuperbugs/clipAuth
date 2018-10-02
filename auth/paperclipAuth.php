@@ -11,10 +11,10 @@ if (!defined('DOKU_INC')) {
     die();
 }
 
-$dir = dirname(__FILE__);
-require_once $dir . "/../vendor/autoload.php";
-use Doctrine\ORM\Tools\Setup;
-use Doctrine\ORM\EntityManager;
+//require_once $dir . "/../vendor/autoload.php";
+//use Doctrine\ORM\Tools\Setup;
+//use Doctrine\ORM\EntityManager;
+var $pdo;
 
 
 
@@ -43,13 +43,22 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
         $this->cando['external']    = true; // does the module do external auth checking?
 //        $this->cando['logout']      = true; // can the user logout again? (eg. not possible with HTTP auth)
         // connect to the MySQL
+        $dir = dirname(__FILE__);
+        require_once $dir.'/settings.php';
 
-//        include ('settings.php');
-//        $conn = new mysqli($settings['host'],$settings['username'],$settings['password']);
-//
-//        if ($conn->connect_error) {
-//            die("Connection failed: " . $conn->connect_error);
-//        }
+        $dsn = "mysql:host=".$settings['host'].
+            ";dbname=".$settings['dbname'].
+            ";port=".$settings['port'].
+            ";charset=".$settings['charset'];
+
+        global $pdo;
+        try {
+            $pdo = new PDO($dsn, $settings['username'], $settings['password']);
+        } catch ( PDOException $e) {
+            echo "Datebase connection error";
+            $this->success = false;
+            exit;
+        }
 
         $this->success = true;
     }
@@ -108,6 +117,10 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
     {
         // FIXME implement password check
 
+
+
+
+
         return true; // return true if okay
     }
 
@@ -129,6 +142,11 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
     public function getUserData($user, $requireGroups=true)
     {
         // FIXME implement
+        global $pdo;
+        $sql = 'select * from  users2 where username = :username';
+        $statement = $pdo->prepare($sql);
+        $statement->bindValue(':username', $user);
+        $statement->execute();
 
         return false;
     }
