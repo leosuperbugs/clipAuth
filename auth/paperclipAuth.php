@@ -14,9 +14,7 @@ if (!defined('DOKU_INC')) {
 //require_once $dir . "/../vendor/autoload.php";
 //use Doctrine\ORM\Tools\Setup;
 //use Doctrine\ORM\EntityManager;
-var $pdo;
-
-
+$pdo;
 
 class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
 {
@@ -31,6 +29,7 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
         parent::__construct(); // for compatibility
 
 
+        $this->cando['addUser']     = true; // can users be added?
         $this->cando['delUser']     = true; // can Users be deleted?
         $this->cando['modLogin']    = true; // can login names be changed?
         $this->cando['modPass']     = true; // can passwords be changed?
@@ -40,8 +39,8 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
         $this->cando['getUsers']    = true; // can a (filtered) list of users be retrieved?
         $this->cando['getUserCount']= true; // can the number of users be retrieved?
         $this->cando['getGroups']   = true; // can a list of available groups be retrieved?
-        $this->cando['external']    = true; // does the module do external auth checking?
-//        $this->cando['logout']      = true; // can the user logout again? (eg. not possible with HTTP auth)
+//        $this->cando['external']    = true; // does the module do external auth checking?
+        $this->cando['logout']      = true; // can the user logout again? (eg. not possible with HTTP auth)
         // connect to the MySQL
         $dir = dirname(__FILE__);
         require_once $dir.'/settings.php';
@@ -116,12 +115,12 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
     public function checkPass($user, $pass)
     {
         // FIXME implement password check
-
-
-
-
-
-        return true; // return true if okay
+        $userinfo = $this->getUserData($user);
+        if ($userinfo !== false) {
+            return auth_verifyPassword($pass, $userinfo['pass']);
+        } else {
+            return false;
+        }
     }
 
     /**
@@ -148,7 +147,20 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
         $statement->bindValue(':username', $user);
         $statement->execute();
 
-        return false;
+        $result = $statement->fetch(PDO::FETCH_ASSOC);
+
+        if ($result == false) {
+            return false;
+        }
+
+        $userinfo = [
+            'pass' => $result['password'],
+            'name' => $result['username'],
+            'mail' => $result['mailaddr'],
+            'grps' => array_filter(explode(',', $result['identity']))
+        ];
+
+        return $userinfo;
     }
 
     /**
@@ -170,11 +182,12 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
      *
      * @return bool|null
      */
-    //public function createUser($user, $pass, $name, $mail, $grps = null)
-    //{
-        // FIXME implement
-    //    return null;
-    //}
+    public function createUser($user, $pass, $name, $mail, $grps = null)
+    {
+//         FIXME implement
+        
+        return null;
+    }
 
     /**
      * Modify user data [implement only where required/possible]
