@@ -190,8 +190,19 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
 
         // if the user does not exist
         // check the invitation code
-        if ($conf['needInvitation']) {
+        if ($conf['needInvitation'] == 0) {
             $invitation = $pass['invitation'];
+            $sql = 'select * from '.$this->settings['invitationCode'].' where invitationCode = :code';
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':code', $invitation);
+            $statement->execute();
+            $result = $statement->fetch(PDO::FETCH_ASSOC);
+            // the code should be valid and haven't been used
+            if ($result === false || $result['isUsed'] == 1) {
+                // return false as user has already been registered
+                 return false;
+            }
+            $pass = $pass['pass'];
         }
         // create the user in database
         $sql = "insert into ".$this->settings['usersinfo'].
@@ -213,6 +224,13 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
         $result = $statement->execute();
 
         if ($result === true) {
+            // set the invitation code to invalid
+            $sql = "update code set isUsed = 1 where invitationCode = :code";
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':code', $invitation);
+            $result = $statement->execute();
+
+            echo  $result;
             return true;
         }
         else {
