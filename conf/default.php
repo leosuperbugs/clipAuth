@@ -6,4 +6,4 @@
  */
 
 //$conf['fixme']    = 'FIXME';
-
+$conf['needInvitation'] = 0;

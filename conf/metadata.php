@@ -7,4 +7,4 @@
 
 
 //$meta['fixme'] = array('string');
-
+$meta['needInvitation'] = array('onoff');

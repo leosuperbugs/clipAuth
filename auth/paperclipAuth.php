@@ -14,12 +14,13 @@ if (!defined('DOKU_INC')) {
 //require_once $dir . "/../vendor/autoload.php";
 //use Doctrine\ORM\Tools\Setup;
 //use Doctrine\ORM\EntityManager;
-$pdo;
 
 class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
 {
 
-    var $sql; // the database server
+//    var $sql; // the database server
+    var $pdo;
+    var $settings;
 
     /**
      * Constructor.
@@ -42,17 +43,14 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
 //        $this->cando['external']    = true; // does the module do external auth checking?
         $this->cando['logout']      = true; // can the user logout again? (eg. not possible with HTTP auth)
         // connect to the MySQL
-        $dir = dirname(__FILE__);
-        require_once $dir.'/settings.php';
+        require_once 'settings.php';
+        $dsn = "mysql:host=".$this->settings['host'].
+            ";dbname=".$this->settings['dbname'].
+            ";port=".$this->settings['port'].
+            ";charset=".$this->settings['charset'];
 
-        $dsn = "mysql:host=".$settings['host'].
-            ";dbname=".$settings['dbname'].
-            ";port=".$settings['port'].
-            ";charset=".$settings['charset'];
-
-        global $pdo;
         try {
-            $pdo = new PDO($dsn, $settings['username'], $settings['password']);
+            $this->pdo = new PDO($dsn, $this->settings['username'], $this->settings['password']);
         } catch ( PDOException $e) {
             echo "Datebase connection error";
             $this->success = false;
@@ -141,9 +139,8 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
     public function getUserData($user, $requireGroups=true)
     {
         // FIXME implement
-        global $pdo;
-        $sql = 'select * from  users2 where username = :username';
-        $statement = $pdo->prepare($sql);
+        $sql = 'select * from '.$this->settings['usersinfo'].' where username = :username';
+        $statement = $this->pdo->prepare($sql);
         $statement->bindValue(':username', $user);
         $statement->execute();
 
@@ -184,9 +181,43 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
      */
     public function createUser($user, $pass, $name, $mail, $grps = null)
     {
-//         FIXME implement
-        
-        return null;
+        global $conf;
+
+        // check if the user already exist
+        if ($this->getUserData($user) !== false) {
+            return false;
+        }
+
+        // if the user does not exist
+        // check the invitation code
+        if ($conf['needInvitation']) {
+            $invitation = $pass['invitation'];
+        }
+        // create the user in database
+        $sql = "insert into ".$this->settings['usersinfo'].
+            "(id, username, password, realname, mailaddr, identity)
+            values
+            (null, :user, :pass, :name, :mail, :grps)";
+        $statement = $this->pdo->prepare($sql);
+        $statement->bindValue(':user', $user);
+        $pass = auth_cryptPassword($pass);
+        $statement->bindValue(':pass', $pass);
+        $statement->bindValue(':name', $name);
+        $statement->bindValue(':mail', $mail);
+        // set default group if no groups specified
+        if(!is_array($grps)) $grps = array($conf['defaultgroup']);
+        $grps = join(',', $grps);
+
+        $statement->bindValue(':grps', $grps);
+
+        $result = $statement->execute();
+
+        if ($result === true) {
+            return true;
+        }
+        else {
+            return null;
+        }
     }
 
     /**
@@ -199,11 +230,11 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
      *
      * @return  bool
      */
-    //public function modifyUser($user, $changes)
-    //{
-        // FIXME implement
-    //    return false;
-    //}
+    public function modifyUser($user, $changes)
+    {
+
+        return false;
+    }
 
     /**
      * Delete one or more users [implement only where required/possible]
