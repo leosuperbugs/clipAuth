@@ -250,6 +250,19 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
      */
     public function modifyUser($user, $changes)
     {
+        if ($this->getUserData($user) !== false) {
+            if (isset($changes['pass'])) {
+                $pass = auth_cryptPassword($changes['pass']);
+                $sql = "update ".$this->settings['usersinfo'] ." set password = :pass where username = :user";
+                $statement = $this->pdo->prepare($sql);
+                $statement->bindValue(':pass', $pass);
+                $statement->bindValue(':user', $user);
+                $result = $statement->execute();
+
+                return $result;
+
+            }
+        }
 
         return false;
     }
