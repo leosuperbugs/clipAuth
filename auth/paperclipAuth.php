@@ -121,6 +121,15 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
         }
     }
 
+    private  function  transferResult ($result) {
+       return [
+            'pass' => $result['password'],
+            'name' => $result['username'],
+            'mail' => $result['mailaddr'],
+            'grps' => array_filter(explode(',', $result['identity']))
+        ];
+    }
+
     /**
      * Return user info
      *
@@ -150,12 +159,7 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
             return false;
         }
 
-        $userinfo = [
-            'pass' => $result['password'],
-            'name' => $result['username'],
-            'mail' => $result['mailaddr'],
-            'grps' => array_filter(explode(',', $result['identity']))
-        ];
+        $userinfo = $this->transferResult($result);
 
         return $userinfo;
     }
@@ -276,12 +280,80 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
      *
      * @return  int    number of users deleted
      */
-    //public function deleteUsers($users)
-    //{
-        // FIXME implement
-    //    return false;
-    //}
+    public function deleteUsers($users)
+    {
+        $counter = 0;
+        foreach ($users as $user) {
+            if ($this->getUserData($user) !== false) {
+                $sql = "delete from " . $this->settings['usersinfo'] . " where username = :username";
+                $statement = $this->pdo-prepare($sql);
+                $statement->bindValue(':username', $user);
+                $result = $statement->execute();
 
+                if ($result) $counter += 1;
+            }
+
+        }
+        return $counter;
+    }
+
+    var $fieldToDB = [
+        'user' => 'username',
+        'name' => 'realname',
+        'mail' => 'mailaddr',
+        'grps' => 'identity'
+    ];
+
+    private function processOneField($filter, $fieldName, $conditions) {
+        if ($filter[$fieldName]) {
+            $elements = $filter[$fieldName];
+            $elements = explode('|', $elements);
+            foreach ($elements as $element) {
+                $condition = $this->fieldToDB[$element].' = '.$element;
+                array_push($conditions, $condition);
+            }
+        };
+        return $conditions;
+    }
+
+    private  function  _filter($filter) {
+        $conditions = array();
+        $this->processOneField($filter, 'user', $conditions);
+        $this->processOneField($filter, 'mail', $conditions);
+        $this->processOneField($filter, 'name', $conditions);
+        $this->processOneField($filter, 'grps', $conditions);
+        return $conditions;
+    }
+
+    private  function  _retrieveUsers($filter) {
+        $conditions = $this->_filter($filter);
+
+        if (count($conditions) > 0) {
+            $condArr = implode(' OR ', $conditions);
+            $sql = 'select * from '. $this->settings['usersinfo'] . " where ". $condArr;
+        } else {
+            $sql = 'select * from '. $this->settings['usersinfo'];
+        }
+        $statement = $this->pdo->prepare($sql);
+        $statement->execute();
+
+        return $statement;
+
+    }
+
+    private  function _countUsers($filter) {
+        $conditions = $this->_filter($filter);
+
+        if (count($conditions) > 0) {
+            $condArr = implode(' OR ', $conditions);
+            $sql = 'select count(*) from '. $this->settings['usersinfo'] . " where ". $condArr;
+        } else {
+            $sql = 'select count(*) from '. $this->settings['usersinfo'];
+        }
+        $num = $this->pdo->query($sql)->fetchColumn();
+
+        return $num;
+    }
     /**
      * Bulk retrieval of user data [implement only where required/possible]
      *
@@ -293,11 +365,16 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
      *
      * @return  array list of userinfo (refer getUserData for internal userinfo details)
      */
-    //public function retrieveUsers($start = 0, $limit = 0, $filter = null)
-    //{
-        // FIXME implement
-    //    return array();
-    //}
+    public function retrieveUsers($start = 0, $limit = 0, $filter = null)
+    {
+        $statement = $this->_retrieveUsers($filter);
+        $results = array();
+        while (($result = $statement->fetch(PDO::FETCH_ASSOC)) !== false) {
+            $results[$result['username']] = $this->transferResult($result);
+        }
+
+        return $results;
+    }
 
     /**
      * Return a count of the number of user which meet $filter criteria
@@ -309,11 +386,11 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
      *
      * @return int
      */
-    //public function getUserCount($filter = array())
-    //{
-        // FIXME implement
-    //    return 0;
-    //}
+    public function getUserCount($filter = array())
+    {
+        $num = $this->_countUsers($filter);
+        return $num;
+    }
 
     /**
      * Define a group [implement only where required/possible]
