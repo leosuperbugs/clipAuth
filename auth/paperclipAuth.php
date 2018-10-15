@@ -124,7 +124,7 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
     private  function  transferResult ($result) {
        return [
             'pass' => $result['password'],
-            'name' => $result['username'],
+            'name' => $result['realname'],
             'mail' => $result['mailaddr'],
             'grps' => array_filter(explode(',', $result['identity']))
         ];
@@ -304,12 +304,27 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
         'grps' => 'identity'
     ];
 
-    private function processOneField($filter, $fieldName, $conditions) {
-        if ($filter[$fieldName]) {
-            $elements = $filter[$fieldName];
+    private function processOnefield($filter, $fieldname, &$conditions) {
+        if ($filter[$fieldname]) {
+            $elements = $filter[$fieldname];
             $elements = explode('|', $elements);
             foreach ($elements as $element) {
-                $condition = $this->fieldToDB[$element].' = '.$element;
+                $condition = $this->fieldToDB[$fieldname].' = "'.$element.'"';
+                array_push($conditions, $condition);
+            }
+        };
+        return $conditions;
+    }
+
+    private function processGrps($filter, $fieldname, &$conditions) {
+        // since the identity of user is stored like xxx, xxx
+        // the way to match identity should be different
+        // as a result I used 'like' to treat the grps field
+        if ($filter[$fieldname]) {
+            $elements = $filter[$fieldname];
+            $elements = explode('|', $elements);
+            foreach ($elements as $element) {
+                $condition = $this->fieldToDB[$fieldname].' like "%'.$element. '%"';
                 array_push($conditions, $condition);
             }
         };
@@ -321,7 +336,7 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
         $this->processOneField($filter, 'user', $conditions);
         $this->processOneField($filter, 'mail', $conditions);
         $this->processOneField($filter, 'name', $conditions);
-        $this->processOneField($filter, 'grps', $conditions);
+        $this->processGrps($filter, 'grps', $conditions);
         return $conditions;
     }
 
@@ -350,7 +365,9 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
         } else {
             $sql = 'select count(*) from '. $this->settings['usersinfo'];
         }
-        $num = $this->pdo->query($sql)->fetchColumn();
+        $result = $this->pdo->query($sql);
+        if ($result === false) return 0;
+        $num = $result->fetchColumn();
 
         return $num;
     }
