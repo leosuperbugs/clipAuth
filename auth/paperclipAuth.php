@@ -110,14 +110,25 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
      *
      * @return  bool
      */
-    public function checkPass($user, $pass)
+    public function checkPass(&$user, $pass)
     {
         // FIXME implement password check
-        $userinfo = $this->getUserData($user);
-        if ($userinfo !== false) {
-            return auth_verifyPassword($pass, $userinfo['pass']);
-        } else {
+        if (!$user || !$pass) {
             return false;
+        } else {
+            // enable user to use their mail address to login
+            if (filter_var($user, FILTER_VALIDATE_EMAIL)) {
+                $userinfo = $this->getUserDataByEmail($user);
+                $user = $userinfo['user'];
+            } else {
+                $userinfo = $this->getUserData($user);
+            }
+            // begin to verify
+            if ($userinfo !== false) {
+                return auth_verifyPassword($pass, $userinfo['pass']);
+            } else {
+                return false;
+            }
         }
     }
 
@@ -162,6 +173,27 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
         $userinfo = $this->transferResult($result);
 
         return $userinfo;
+    }
+
+    private function getUserDataByEmail($email)
+    {
+        $sql = 'select * from '.$this->settings['usersinfo'].' where mailaddr = :email';
+        $statement = $this->pdo->prepare($sql);
+        $statement->bindValue(':email', $email);
+        $statement->execute();
+
+        $result = $statement->fetch(PDO::FETCH_ASSOC);
+
+        if ($result == false) {
+            return false;
+        }
+
+        $name = $result['username'];
+        $userinfo = $this->transferResult($result);
+        $userinfo['user'] = $name;
+
+        return $userinfo;
+
     }
 
     /**
