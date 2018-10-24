@@ -10,6 +10,7 @@ $this->settings = [
     'username' => 'leo',
     'password' => '',
     'usersinfo' => 'users2',
+    'editlog' => 'editlog',
     'invitationCode' => 'code',
     'dbname' => 'test',
     'charset' => 'utf8'
