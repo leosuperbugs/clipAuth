@@ -60,17 +60,23 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     public function handle_common_wikipage_save(Doku_Event $event, $param)
     {
         global $INFO;
+        echo 'error';
         $pageid = $event->data['id'];
         $summary = $event->data['summary'];
         $editor = $INFO['userinfo']['name'];
         $sql = 'insert into '.$this->settings['editlog'].' (id, pageid, time, summary, editor)
             values
                 (null, :pageid, null, :summary, :editor)';
-        $statement = $this->pdo->prepare($sql);
-        $statement->bindValue(':pageid', $pageid);
-        $statement->bindValue(':summary', $summary);
-        $statement->bindValue(':editor', $editor);
-        $result = $statement->execute();
+        try {
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':pageid', $pageid);
+            $statement->bindValue(':summary', $summary);
+            $statement->bindValue(':editor', $editor);
+            $result = $statement->execute();
+        }
+        catch (PDOException $e){
+            echo $e->getMessage();
+        }
         if ($result === false) {
             echo 'log error';
             exit;
