@@ -15,6 +15,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 {
     var $pdo;
     var $settings;
+    var $editperpage;
     /**
      * Registers a callback function for a given event
      *
@@ -24,6 +25,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
      */
     public function register(Doku_Event_Handler $controller)
     {
+        $this->editperpage = $this->getConf('editperpage');
         require  dirname(__FILE__).'/../settings.php';
         $dsn = "mysql:host=".$this->settings['host'].
             ";dbname=".$this->settings['dbname'].
@@ -60,7 +62,6 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     public function handle_common_wikipage_save(Doku_Event $event, $param)
     {
         global $INFO;
-        echo 'error';
         $pageid = $event->data['id'];
         $summary = $event->data['summary'];
         $editor = $INFO['userinfo']['name'];
@@ -146,7 +147,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     private function checkPagenum($pagenum, $count, $username) {
         global $conf;
         $num = $count;
-        $maxnum = ceil($num / $this->getConf('editperpage'));
+        $maxnum = ceil($num / $this->editperpage);
         if ($pagenum > $maxnum) {
             $pagenum = $maxnum;
         } elseif ($pagenum < 1) {
@@ -162,15 +163,15 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         $username = $USERINFO['name'];
         $count = $this->countEditForName($username);
         $pagenum = $this->checkPagenum($pagenum, $count, $username);
-        $offset = ($pagenum - 1) * $this->getConf('editperpage');
-        $count = $this->getConf('editperpage');
+        $offset = ($pagenum - 1) * $this->editperpage;
+        $countPage = $this->editperpage;
 
         $sql = 'select * from '.$this->settings['editlog'].' where editor=:editor order by id DESC limit :offset ,:count';
         try {
             $statement = $this->pdo->prepare($sql);
             $statement->bindValue(':editor', $username);
             $statement->bindValue(':offset', $offset, PDO::PARAM_INT);
-            $statement->bindValue(':count', $count, PDO::PARAM_INT);
+            $statement->bindValue(':count', $countPage, PDO::PARAM_INT);
             $r = $statement->execute();
         }
         catch (PDOException $e){
@@ -183,7 +184,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         }
 
 
-        
+
     }
 
     private function comment($pagenum) {
