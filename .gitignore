@@ -2,4 +2,5 @@
 .idea/misc.xml
 .idea/modules.xml
 .idea/workspace.xml
-auth/settings.php
+settings.php
+invite/insertSQL.sh
