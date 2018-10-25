@@ -165,11 +165,16 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         $count = $this->getConf('editperpage');
 
         $sql = 'select * from '.$this->settings['editlog'].' where editor=:editor order by id DESC limit :offset ,:count';
-        $statement = $this->pdo->prepare($sql);
-        $statement->bindValue(':editor', $username);
-        $statement->bindValue(':offset', $offset, PDO::PARAM_INT);
-        $statement->bindValue(':count', $count, PDO::PARAM_INT);
-        $statement->execute();
+        try {
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':editor', $username);
+            $statement->bindValue(':offset', $offset, PDO::PARAM_INT);
+            $statement->bindValue(':count', $count, PDO::PARAM_INT);
+            $r = $statement->execute();
+        }
+        catch (PDOException $e){
+            echo $e->getMessage();
+        }
 
         while (($result = $statement->fetch(PDO::FETCH_ASSOC)) !== false) {
             // Processing the result of editlog, generating a row of log
