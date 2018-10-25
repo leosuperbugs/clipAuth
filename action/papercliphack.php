@@ -75,6 +75,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         }
         catch (PDOException $e){
             echo $e->getMessage();
+	    exit;
         }
         if ($result === false) {
             echo 'log error';
@@ -174,11 +175,15 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         }
         catch (PDOException $e){
             echo $e->getMessage();
+	    exit;
         }
 
         while (($result = $statement->fetch(PDO::FETCH_ASSOC)) !== false) {
             // Processing the result of editlog, generating a row of log
             $this->editUnit($result);
+	    echo $username;
+	    echo $result;
+	    exit;
         }
 
 
