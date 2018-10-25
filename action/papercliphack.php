@@ -39,6 +39,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 
         $controller->register_hook('COMMON_WIKIPAGE_SAVE', 'AFTER', $this, 'handle_common_wikipage_save');
         $controller->register_hook('TPL_CONTENT_DISPLAY', 'BEFORE', $this, 'handle_tpl_content_display');
+        $controller->register_hook('MENU_ITEMS_ASSEMBLY', 'AFTER', $this, 'changelink');
 //        $controller->register_hook('HTML_REGISTERFORM_OUTPUT', 'AFTER', $this, 'handle_html_registerform_output');
 //        $controller->register_hook('HTML_LOGINFORM_OUTPUT', 'AFTER', $this, 'handle_html_loginform_output');
 //        $controller->register_hook('HTML_UPDATEPROFILEFORM_OUTPUT', 'AFTER', $this, 'handle_html_updateprofileform_output');
@@ -86,6 +87,14 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
      */
     private function editUnit($editData) {
         $pageid = $editData['pageid']; // Fix me. Need fix to provide right info, so do other variables
+        $mainPageName = '';
+        $indexForShow = '';
+        if ($pageid) {
+            $indexArray = explode(':', $pageid);
+            $mainPageName = $indexArray[count($indexArray) - 1];
+            $indexForShow = array_reverse($indexArray);
+            $indexForShow = implode('</span>-<span class="paperclip__link">', $indexForShow);
+        }
         $time   = $editData['time'];
         $summary= $editData['summary'];
         $editor = $editData['editor'];
@@ -95,21 +104,20 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     <hr class='paperclip__editlog__split'>
     <div class='paperclip__editlog__header'>
         <div class='paperclip__editlog__pageid'>
-           $pageid 
+           $mainPageName 
         </div>
         <div class='paperclip__editlog__time'>
-            $time
+            你最后的编辑时间为 $time .
         </div>
     </div> 
     <p class='paperclip__editlog__sum'>
-        $summary
+        编辑摘要： $summary
     </p>
     <div class='paperclip__editlog__footer'>
         <a class='paperclip__editlog__link' href='/doku.php?id=$pageid&show=edit'>继续编辑</a>
         <a class='paperclip__editlog__link' href='/doku.php?id=$pageid'>查看当前条目</a>
         <div class='paperclip__editlog__index'>
-            索引
-            <ul></ul>
+            索引：<span class='paperclip__link'>$indexForShow</span>
         </div>
     </div>
 </div> 
@@ -176,8 +184,12 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     }
     public function handle_tpl_content_display(Doku_Event $event, $param)
     {
-        global $_GET;
+        global $_GET, $ACT;
         $show = $_GET['show'];
+        if ($ACT === 'profile') {
+            $this->editlog(1);
+            exit;
+        }
         if ($show === 'editlog') {
             $pagenum = $_GET['page'];
             $this->editlog($pagenum);
@@ -186,7 +198,6 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         } else if ($show === 'setting') {
             echo 'setting';
         }
-        exit;
     }
     public function handle_html_registerform_output(Doku_Event $event, $param)
     {
@@ -196,6 +207,10 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     }
     public function handle_html_updateprofileform_output(Doku_Event $event, $param)
     {
+    }
+    public function changeLink(Doku_Event &$event, $param)
+    {
+        if($event->data['view'] != 'user') return;
     }
 
 }
