@@ -183,6 +183,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         }
 
 
+        
     }
 
     private function comment($pagenum) {
