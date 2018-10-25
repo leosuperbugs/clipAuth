@@ -8,3 +8,5 @@
 
 //$meta['fixme'] = array('string');
 $meta['needInvitation'] = array('onoff');
+$meta['editperpage']      = array('numeric');
+$meta['commentperpage']   = array('numeric');

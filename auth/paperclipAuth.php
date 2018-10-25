@@ -43,7 +43,7 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
 //        $this->cando['external']    = true; // does the module do external auth checking?
         $this->cando['logout']      = true; // can the user logout again? (eg. not possible with HTTP auth)
         // connect to the MySQL
-        require_once 'settings.php';
+        require dirname(__FILE__).'/../settings.php';
         $dsn = "mysql:host=".$this->settings['host'].
             ";dbname=".$this->settings['dbname'].
             ";port=".$this->settings['port'].
