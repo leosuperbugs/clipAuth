@@ -60,7 +60,6 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     public function handle_common_wikipage_save(Doku_Event $event, $param)
     {
         global $INFO;
-        echo 'error';
         $pageid = $event->data['id'];
         $summary = $event->data['summary'];
         $editor = $INFO['userinfo']['name'];
