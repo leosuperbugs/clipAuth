@@ -25,7 +25,8 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
      */
     public function register(Doku_Event_Handler $controller)
     {
-        $this->editperpage = $this->getConf('editperpage');
+	// paperclip server, getConf() not working on this fucking server
+        $this->editperpage = 5;
         require  dirname(__FILE__).'/../settings.php';
         $dsn = "mysql:host=".$this->settings['host'].
             ";dbname=".$this->settings['dbname'].
@@ -183,9 +184,6 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         while (($result = $statement->fetch(PDO::FETCH_ASSOC)) !== false) {
             // Processing the result of editlog, generating a row of log
             $this->editUnit($result);
-	    echo $username;
-	    echo $result;
-	    exit;
         }
 
 
