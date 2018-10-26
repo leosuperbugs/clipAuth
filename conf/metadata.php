@@ -7,6 +7,6 @@
 
 
 //$meta['fixme'] = array('string');
+$meta['editperpage']      = array('numericopt');
+$meta['commentperpage']   = array('numericopt');
 $meta['needInvitation'] = array('onoff');
-$meta['editperpage']      = array('numeric');
-$meta['commentperpage']   = array('numeric');
