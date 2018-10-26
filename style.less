@@ -1,5 +1,29 @@
 @clipunit :1rem;
 
+.paperclip__selfinfo {
+  padding: 3 * @clipunit 8vw 0;
+  min-height: 90vh;
+  margin: 0 -8vw 0;
+}
+.paperclip__selfinfo__header {
+  margin-bottom: 2.5 * @clipunit;
+  display: inline-block;
+  border-bottom: 2px solid __paperclip__gold__;
+}
+
+.paperclip__selfinfo__navbar {
+  display: inline-block;
+  margin-right: 1.5 * @clipunit;
+  cursor: pointer;
+}
+
+.paperclip__selfinfo__navbar a{
+  color: __paperclip__stdbg__;
+}
+.paperclip__selfinfo__selectednav {
+  border-bottom: 4px solid __paperclip__gold__;
+  font-size: 1.25rem;
+}
 
 .paperclip__editlog__unit {
   margin-bottom: @clipunit;
@@ -43,4 +67,8 @@
 
 .paperclip__editlog__index {
   float: right;
+}
+
+.noshow {
+  display: none;
 }

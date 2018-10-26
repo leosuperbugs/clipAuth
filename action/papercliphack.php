@@ -11,6 +11,12 @@ if (!defined('DOKU_INC')) {
     die();
 }
 
+define('__CLIP__EDIT__', 0);
+define('__CLIP__COMMENT__', 1);
+define('__CLIP__SETTING__', 2);
+define('__NAVBARSETTING__', array('最近编辑', '评论/回复', '设置'));
+define('__HREFSETTING__', array('editlog', 'comment', 'setting'));
+
 class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 {
     var $pdo;
@@ -94,8 +100,10 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
      * @param $editData
      *
      */
-    private function editUnit($editData) {
-        $pageid = $editData['pageid']; // Fix me. Need fix to provide right info, so do other variables
+    private function editUnit($editData, $isFirst) {
+        $pageid = $editData['pageid'];
+        $needHide = '';
+        if ($isFirst === true) $needHide = 'noshow';
         $mainPageName = '';
         $indexForShow = '';
         if ($pageid) {
@@ -110,7 +118,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 
         print "
 <div class='paperclip__editlog__unit'>
-    <hr class='paperclip__editlog__split'>
+    <hr class='paperclip__editlog__split $needHide'>
     <div class='paperclip__editlog__header'>
         <div class='paperclip__editlog__pageid'>
            $mainPageName 
@@ -132,7 +140,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 </div> 
         ";
     }
-    /*
+    /**
      * number
      */
     private function countEditForName($username) {
@@ -148,6 +156,8 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
      */
     private function checkPagenum($pagenum, $count, $username) {
         global $conf;
+        if (!isset($pagenum)) return 1;
+
         $num = $count;
         $maxnum = ceil($num / $this->editperpage);
         if ($pagenum > $maxnum) {
@@ -159,7 +169,44 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         return $pagenum;
     }
 
+    /**
+     * @param $content Which part of navbar is printed
+     * @param $highlight Which part of navbar is selected
+     */
+    private function printNavbar ($content, $highlight) {
+        $isSelected = '';
+        $navbarContent = __NAVBARSETTING__[$content];
+        $hrefContent = __HREFSETTING__[$content];
+
+        if ($content === $highlight) {
+            $isSelected = 'paperclip__selfinfo__selectednav';
+        }
+        print "<div class='paperclip__selfinfo__navbar $isSelected'>
+<a href='/doku.php?show=$hrefContent&page=1&id=start'>$navbarContent</a></div>";
+    }
+
+    /**
+     * Print the content of header part, switching according to $highlight
+     * @param $highlight
+     */
+    private function printHeader($highlight) {
+        if ($highlight >= __CLIP__EDIT__ && $highlight <= __CLIP__SETTING__) {
+            print "<div class='paperclip__selfinfo__header'>";
+            $this->printNavbar(__CLIP__EDIT__, $highlight);
+            $this->printNavbar(__CLIP__COMMENT__, $highlight);
+            $this->printNavbar(__CLIP__SETTING__, $highlight);
+            print "</div>";
+        }
+    }
+
+    /**
+     * @param $pagenum
+     *
+     * Print the content of edit log
+     */
     private function editlog($pagenum) {
+        // Out put the header part
+        $this->printHeader(__CLIP__EDIT__);
         // Fix me. Here we out put the content of edit history
         global $USERINFO, $conf;
         $username = $USERINFO['name'];
@@ -180,18 +227,44 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             echo $e->getMessage();
 	    exit;
         }
-
+        $isFirst = true;
         while (($result = $statement->fetch(PDO::FETCH_ASSOC)) !== false) {
             // Processing the result of editlog, generating a row of log
-            $this->editUnit($result);
+            $this->editUnit($result, $isFirst);
+            $isFirst = false;
         }
-
-
-
     }
+
+//    private function printFooter() {
+//        print '<div class="paperclip__footer nomobile">
+//    <ul class="paperclip__links">
+//        <li>
+//            <a href="https://www.weibo.com/p/1005056414205745" target="_blank">
+//                <img src="lib/tpl/starter/images/weibo.svg" class="paperclip__platform">
+//            </a>
+//        </li>
+//        <li>
+//            <a href="">
+//                <img src="lib/tpl/starter/images/wechat.svg" class="paperclip__platform" id="wechatfooter">
+//            </a>
+//            <img id="qrcodefooter" src="lib/tpl/starter/images/qrcode.jpg">
+//        </li>
+//        <li>
+//            <a href="https://space.bilibili.com/258150656/" target="_blank">
+//                <img src="lib/tpl/starter/images/bilibili.svg" class="paperclip__platform">
+//            </a>
+//        </li>
+//    </ul>
+//    <div class="paperclip__ftlogo">
+//        <img src="lib/tpl/starter/images/home/logo-pet.png">
+//    </div>
+//    <div class="clear"></div>
+//</div>';
+//    }
 
     private function comment($pagenum) {
         // Fix me. Here we out put the content of comment page
+        $this->printHeader(__CLIP__COMMENT__);
     }
 
     private function setting() {
@@ -202,17 +275,28 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     {
         global $_GET, $ACT;
         $show = $_GET['show'];
-        if ($ACT === 'profile') {
-            $this->editlog(1);
-            exit;
-        }
-        if ($show === 'editlog') {
-            $pagenum = $_GET['page'];
-            $this->editlog($pagenum);
+        if ($ACT === 'profile' || $show === 'editlog') {
+            $event->data = '';
+            print "<div class='paperclip__selfinfo'>";
+            if ($show === 'editlog') {
+                $pagenum = $_GET['page'];
+                $this->editlog($pagenum);
+            } else {
+                $this->editlog(1);
+            }
+            print "</div>";
+
         } else if ($show === 'comment') {
-            echo 'comment';
+            print "<div class='paperclip__selfinfo'>";
+            $pagenum = $_GET['page'];
+            $this->comment($pagenum);
+            print "</div>";
+            exit;
         } else if ($show === 'setting') {
+            print "<div class='paperclip__selfinfo'>";
             echo 'setting';
+            print "</div>";
+            exit;
         }
     }
     public function handle_html_registerform_output(Doku_Event $event, $param)

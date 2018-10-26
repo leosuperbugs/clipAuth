@@ -6,6 +6,6 @@
  */
 
 //$conf['fixme']    = 'FIXME';
-$conf['needInvitation'] = 0;
 $conf['editperpage']    = 5;
 $conf['commentperpage'] = 5;
+$conf['needInvitation'] = 0;
