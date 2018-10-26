@@ -274,7 +274,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         $show = $_GET['show'];
         if ($ACT === 'profile' || $show === 'editlog') {
             $event->data = '';
-            print "<div class='paperclip__selfinfo gridbackground'>";
+            print "<div class='paperclip__selfinfo'>";
             if ($show === 'editlog') {
                 $pagenum = $_GET['page'];
                 $this->editlog($pagenum);
@@ -284,13 +284,13 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             print "</div>";
 
         } else if ($show === 'comment') {
-            print "<div class='paperclip__selfinfo gridbackground'>";
+            print "<div class='paperclip__selfinfo'>";
             $pagenum = $_GET['page'];
             $this->comment($pagenum);
             print "</div>";
             exit;
         } else if ($show === 'setting') {
-            print "<div class='paperclip__selfinfo gridbackground'>";
+            print "<div class='paperclip__selfinfo'>";
             echo 'setting';
             print "</div>";
             exit;
