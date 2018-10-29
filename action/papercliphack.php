@@ -233,10 +233,15 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 	    exit;
         }
         $isFirst = true;
+
         while (($result = $statement->fetch(PDO::FETCH_ASSOC)) !== false) {
             // Processing the result of editlog, generating a row of log
             $this->editUnit($result, $isFirst);
             $isFirst = false;
+        }
+
+        if ($statement->rowCount() === 0) {
+            echo '您还没有编辑记录';
         }
     }
 
