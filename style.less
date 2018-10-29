@@ -1,7 +1,7 @@
 @clipunit :1rem;
 
 .paperclip__selfinfo {
-  padding: 3 * @clipunit 8vw 0;
+  padding: 6 * @clipunit 8vw 0;
   min-height: 90vh;
   margin: 0 -8vw 0;
 }
@@ -87,15 +87,34 @@
 
 .paperclip__pagehref {
   color: __paperclip__gold__ !important;
+  vertical-align: middle;
   font-size: 0.84rem;
   text-decoration:underline !important;
 }
 
 .paperclip__pagenum__nohref {
-  margin-top: 0.1rem;
-  vertical-align: bottom;
+  vertical-align: middle;
   font-size: 0.84rem;
   border: none;
+}
+
+.paperclip__pagejump {
+  border: none;
+}
+
+.paperclip__pagejump__input{
+  border: 2px solid __paperclip__stdbg__;
+  width: @clipunit;
+  height: @clipunit;
+}
+
+.paperclip__pagejump__button {
+  border: none;
+  font-size: 0.84rem;
+  background-color: transparent;
+  color: __paperclip__gold__;
+  text-decoration: underline;
+  margin-left: 0.5 * @clipunit;
 }
 
 .noshow {

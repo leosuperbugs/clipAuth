@@ -132,8 +132,8 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         编辑摘要： $summary
     </p>
     <div class='paperclip__editlog__footer'>
-        <a class='paperclip__editlog__link' href='/doku.php?id=$pageid&show=edit'>继续编辑</a>
-        <a class='paperclip__editlog__link' href='/doku.php?id=$pageid'>查看当前条目</a>
+        <a class='paperclip__editlog__link' href='/doku.php?id=$pageid&do=edit' target='_blank'>继续编辑</a>
+        <a class='paperclip__editlog__link' href='/doku.php?id=$pageid' target='_blank'>查看当前条目</a>
         <div class='paperclip__editlog__index'>
             索引：<span class='paperclip__link'>$indexForShow</span>
         </div>
@@ -334,7 +334,15 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
                 $this->printEllipsis();
                 $this->printOnePagenum($sum);
             }
-
+            // print the input and jump button
+            print "
+<td class='paperclip__pagejump'>
+<form action='/doku.php' method='get'>
+<input type='text' class='paperclip__pagejump__input' name='page' required>
+<input type='hidden' name='show' value='editlog'> 
+<input type='submit' class='paperclip__pagejump__button' value='跳转'>
+</form>
+</td>";
             print "</tr></table></div>";
         }
     }
