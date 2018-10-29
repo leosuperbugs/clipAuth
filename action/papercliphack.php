@@ -22,6 +22,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     var $pdo;
     var $settings;
     var $editperpage;
+    private $editRecordNum;
     /**
      * Registers a callback function for a given event
      *
@@ -139,18 +140,22 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         ";
     }
     /**
+     * Count the total edit record number, not page number.
      * number
      */
     private function countEditForName($username) {
-        $sql = 'select count(*) from '.$this->settings['editlog']. ' where editor = '.$username;
+        if (isset($this->editRecordNum)) return $this->editRecordNum;
+
+        $sql = 'select count(*) from '.$this->settings['editlog']. ' where editor = '."\"".$username."\"";
         $result = $this->pdo->query($sql);
 
         if ($result === false) return 1;
         $num = $result->fetchColumn();
         return $num;
     }
+
     /**
-     * Return legal pagenum
+     * Return legal pagenum, turn the out-range ones to in-range
      */
     private function checkPagenum($pagenum, $count, $username) {
         global $conf;
@@ -200,7 +205,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     /**
      * @param $pagenum
      *
-     * Print the content of edit log
+     * Print the content of edit log according to the number of page
      */
     private function editlog($pagenum) {
         // Out put the header part
@@ -232,32 +237,6 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         }
     }
 
-//    private function printFooter() {
-//        print '<div class="paperclip__footer nomobile">
-//    <ul class="paperclip__links">
-//        <li>
-//            <a href="https://www.weibo.com/p/1005056414205745" target="_blank">
-//                <img src="lib/tpl/starter/images/weibo.svg" class="paperclip__platform">
-//            </a>
-//        </li>
-//        <li>
-//            <a href="">
-//                <img src="lib/tpl/starter/images/wechat.svg" class="paperclip__platform" id="wechatfooter">
-//            </a>
-//            <img id="qrcodefooter" src="lib/tpl/starter/images/qrcode.jpg">
-//        </li>
-//        <li>
-//            <a href="https://space.bilibili.com/258150656/" target="_blank">
-//                <img src="lib/tpl/starter/images/bilibili.svg" class="paperclip__platform">
-//            </a>
-//        </li>
-//    </ul>
-//    <div class="paperclip__ftlogo">
-//        <img src="lib/tpl/starter/images/home/logo-pet.png">
-//    </div>
-//    <div class="clear"></div>
-//</div>';
-//    }
 
     private function comment($pagenum) {
         // Fix me. Here we out put the content of comment page
@@ -268,18 +247,110 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         // Fix me. Here we out put the content of user setting
 
     }
+
+    /**
+     * Print a new cell in the table
+     * @param $page
+     */
+    private function printOnePagenum ($page) {
+        print "<td class='paperclip__pagenum'><a href='/doku.php?show=editlog&page=$page' class='paperclip__pagehref'>$page</a></td>";
+    }
+
+    private function printPresentPagenum ($page) {
+        print "<td class='paperclip__pagenum__nohref'>$page</td>";
+    }
+
+    /**
+     * Print the ... in the table
+     */
+    private function printEllipsis () {
+        print "<td class='paperclip__pagenum__nohref'>...</td>";
+    }
+
+    /**
+     * @param $start
+     * @param $end The range includes the end
+     */
+    private function printPageFromRange($start, $end) {
+        if ($start > $end) return;
+
+        for ($i = $start; $i <= $end; $i++) {
+            $this->printOnePagenum($i);
+        }
+    }
+
+    /**
+     * Print out a table to show the page number like:
+     * 1 ... 4 5 6 7 8 ... 100
+     *
+     * @param $sum total page number
+     * @param $page
+     */
+    private function paginationNumber($sum, $page) {
+        // check some exception
+        global $USERINFO, $conf;
+        $username = $USERINFO['name'];
+        $page = $this->checkPagenum($page, $this->countEditForName($username), '');
+        if ($sum <= 0 || $page <= 0 || $sum < $page) {
+            echo 'wrong pagenumber passed to pagination';
+        }
+        else {
+            print "<div class='paperclip__pagenav'>";
+            print "<table id='paperclip__pagetable'>";
+            print "<tr>";
+            //print left part
+            $left = $page - 1; // the left part of pagination list
+            if ($left <= 4) {
+                if ($left > 0) {
+                    $this->printPageFromRange(1, $left);
+                }
+            } else {
+                // The table should look like:
+                // 1 ... 4 5
+                $this->printOnePagenum(1);
+                $this->printEllipsis();
+                $this->printPageFromRange($left - 1, $left);
+            }
+            //print centre part
+            $this->printPresentPagenum($page);
+            //print right part
+            $right = $sum - $page;
+            if ($right <= 4) {
+                if ($right > 0) {
+                    $this->printPageFromRange($page + 1, $sum);
+                }
+            } else {
+                // The table should look like:
+                // 7 8 ... 10
+                $this->printPageFromRange($page + 1, $page + 2);
+                $this->printEllipsis();
+                $this->printOnePagenum($sum);
+            }
+
+            print "</tr></table></div>";
+        }
+    }
     public function handle_tpl_content_display(Doku_Event $event, $param)
     {
         global $_GET, $ACT;
         $show = $_GET['show'];
         if ($ACT === 'profile' || $show === 'editlog') {
             $event->data = '';
+            global $USERINFO, $conf;
+            $username = $USERINFO['name'];
+            // A little bit wired here, need fix
+            $editRecordCount = $this->countEditForName($username);
+            $sum = ceil($editRecordCount / $this->editperpage);
+
             print "<div class='paperclip__selfinfo'>";
             if ($show === 'editlog') {
                 $pagenum = $_GET['page'];
                 $this->editlog($pagenum);
+                $this->paginationNumber($sum, $pagenum);
             } else {
                 $this->editlog(1);
+                $this->paginationNumber($sum, 1);
+//                $this->paginationNumber(10, 6);
             }
             print "</div>";
 
