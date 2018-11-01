@@ -36,7 +36,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     {
 	// paperclip server, getConf() not working on this fucking server
         $this->editperpage = 5;
-        $this->replyperpage = $this->getConf('commentperpage');
+        $this->replyperpage = 5;
         require  dirname(__FILE__).'/../settings.php';
         $dsn = "mysql:host=".$this->settings['host'].
             ";dbname=".$this->settings['dbname'].
