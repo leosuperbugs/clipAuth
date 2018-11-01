@@ -28,7 +28,8 @@
   font-size: 1.25rem;
 }
 
-.paperclip__editlog__unit {
+.paperclip__editlog__unit,
+.paperclip__reply__unit{
   margin-bottom: @clipunit;
 }
 
@@ -36,7 +37,8 @@
   color: __paperclip__textarea__;
 }
 
-.paperclip__editlog__pageid {
+.paperclip__editlog__pageid ,
+.paperclip__settings__title{
   display: inline-block;
   font-size: 1.25rem;
   margin-right: 2 * @clipunit;
@@ -48,7 +50,8 @@
   color: __paperclip__edititem__;
 }
 
-.paperclip__editlog__sum {
+.paperclip__editlog__sum,
+.paperclip__settings__info{
   padding: @clipunit 0 @clipunit @clipunit;
   margin-bottom: 0;
   font-size: 0.9rem;
@@ -60,10 +63,15 @@
 }
 
 .paperclip__editlog__footer a,
-.paperclip__editlog__footer span {
+.paperclip__reply__footer a,
+.paperclip__editlog__footer span,
+.paperclip__reply__footer span,
+.paperclip__settings__update{
   color: __paperclip__gold__ !important;
+  text-decoration: underline;
 }
 
+.paperclip__reply__footer a,
 .paperclip__editlog__footer a {
   margin-right: @clipunit;
 }
@@ -116,6 +124,19 @@
   text-decoration: underline;
   margin-left: 0.5 * @clipunit;
 }
+
+.paperclip__reply__from {
+  display: inline-block;
+  font-size: 1rem;
+  margin-right: 2 * @clipunit;
+}
+
+.paperclip__settings__title {
+
+
+}
+
+
 
 .noshow {
   display: none;
