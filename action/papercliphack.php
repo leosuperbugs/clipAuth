@@ -337,7 +337,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         }
 
         if ($statement->rowCount() === 0) {
-            echo '您还没有收到回复';
+            echo '<br>您还没有收到回复<br>';
         }
 
 
