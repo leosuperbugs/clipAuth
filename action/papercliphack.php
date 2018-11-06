@@ -408,7 +408,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         $username = $USERINFO['name'];
         $page = $this->checkPagenum($page, $this->countEditForName($username), '');
         if ($sum <= 0 || $page <= 0 || $sum < $page) {
-            echo 'wrong pagenumber passed to pagination';
+            echo '';
         }
         else {
             print "<div class='paperclip__pagenav'>";
