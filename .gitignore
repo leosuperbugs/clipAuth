@@ -1,5 +1,9 @@
+.gitignore
 .idea/clipauth.iml
+.idea/watcherTasks.xml
 .idea/misc.xml
 .idea/modules.xml
 .idea/workspace.xml
+.idea/
 settings.php
+_test/
