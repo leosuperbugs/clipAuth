@@ -9,3 +9,8 @@
 $conf['editperpage']    = 5;
 $conf['commentperpage'] = 5;
 $conf['needInvitation'] = 0;
+$conf['invitationCodeLen'] = 6;
+$conf['usernameMaxLen'] = 16;
+$conf['passMinLen'] = 8;
+$conf['passMaxLen'] = 40;
+$conf['fullnameMaxLen'] = 16;
