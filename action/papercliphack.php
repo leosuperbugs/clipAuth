@@ -16,23 +16,30 @@ define('__CLIP__COMMENT__', 1);
 define('__CLIP__SETTING__', 2);
 define('__NAVBARSETTING__', array('最近编辑', '评论/回复', '设置'));
 define('__HREFSETTING__', array('editlog', 'comment', 'setting'));
+define('__REGISTER_ORDER__', array(
+    'invitationCode'=> 0,
+    'username' => 2,
+    'email' => 3,
+    'pass' => 4,
+    'passchk' => 5,
+    'fullname' => 6
+));
+
 
 class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 {
-    var $pdo;
-    var $settings;
-    var $editperpage;
-    var $replyperpage;
+    private $pdo;
+    private $settings;
+    // Some constants relating to the pagination of personal centre
+    private $editperpage;
+    private $replyperpage;
     private $editRecordNum;
     private $replyRecordNum;
-    /**
-     * Registers a callback function for a given event
-     *
-     * @param Doku_Event_Handler $controller DokuWiki's event controller object
-     *
-     * @return void
-     */
-    public function register(Doku_Event_Handler $controller)
+    // The order in the result of HTML register output form
+
+    private $order;
+
+    public function __construct()
     {
 	// paperclip server, getConf() not working on this fucking server
         $this->editperpage = 5;
@@ -49,14 +56,64 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             echo "Datebase connection error";
             exit;
         }
+    }
+
+    /**
+     * Registers a callback function for a given event
+     *
+     * @param Doku_Event_Handler $controller DokuWiki's event controller object
+     *
+     * @return void
+     */
+    public function register(Doku_Event_Handler $controller)
+    {
 
         $controller->register_hook('COMMON_WIKIPAGE_SAVE', 'AFTER', $this, 'handle_common_wikipage_save');
         $controller->register_hook('TPL_CONTENT_DISPLAY', 'BEFORE', $this, 'handle_tpl_content_display');
-        $controller->register_hook('MENU_ITEMS_ASSEMBLY', 'AFTER', $this, 'changelink');
+        $controller->register_hook('HTML_REGISTERFORM_OUTPUT', 'BEFORE', $this, 'modifyRegisterForm');
+//        $controller->register_hook('MENU_ITEMS_ASSEMBLY', 'AFTER', $this, 'handle_menu_items_assembly');
 //        $controller->register_hook('HTML_REGISTERFORM_OUTPUT', 'AFTER', $this, 'handle_html_registerform_output');
 //        $controller->register_hook('HTML_LOGINFORM_OUTPUT', 'AFTER', $this, 'handle_html_loginform_output');
 //        $controller->register_hook('HTML_UPDATEPROFILEFORM_OUTPUT', 'AFTER', $this, 'handle_html_updateprofileform_output');
    
+    }
+
+    public function modifyRegisterForm(Doku_Event $event, $param)
+    {
+        // Combined with the order of form
+        // If the order of form changed, this function must change
+        //    'invitationCode'=> 0,
+        //    'username' => 2,
+        //    'email' => 3,
+        //    'pass' => 4,
+        //    'passchk' => 5,
+        //    'fullname' => 6
+
+        $registerFormContent =& $event->data->_content;
+        $this->insertRegisterElements($registerFormContent);
+
+        echo '';
+    }
+
+    private function insertRegisterElements(&$registerFormContent)
+    {
+        // Invitation Code
+        $registerFormContent[__REGISTER_ORDER__['invitationCode']]['maxlength'] = $this->getConf('invitationCodeLen');
+        $registerFormContent[__REGISTER_ORDER__['invitationCode']]['minlength'] = $this->getConf('invitationCodeLen');
+        // Username
+        $registerFormContent[__REGISTER_ORDER__['username']]['maxlength'] = $this->getConf('usernameMaxLen');
+        // E-mail
+
+        // Password
+        $registerFormContent[__REGISTER_ORDER__['pass']]['minlength'] = $this->getConf('passMinLen');
+        $registerFormContent[__REGISTER_ORDER__['pass']]['maxlength'] = $this->getConf('passMaxLen');
+        // Password Check
+        $registerFormContent[__REGISTER_ORDER__['passchk']]['minlength'] = $this->getConf('passMinLen');
+        $registerFormContent[__REGISTER_ORDER__['passchk']]['maxlength'] = $this->getConf('passMaxLen');
+        // Realname
+        $registerFormContent[__REGISTER_ORDER__['fullname']]['maxlength'] = $this->getConf('fullnameMaxLen');
+
+
     }
 
     /**
