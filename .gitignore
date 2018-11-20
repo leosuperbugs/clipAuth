@@ -5,6 +5,8 @@
 .idea/modules.xml
 .idea/workspace.xml
 .idea/
+conf/default.php
+conf/metadata.php
 settings.php
 invite/insertSQL.sh
 _test/
