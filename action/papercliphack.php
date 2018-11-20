@@ -17,12 +17,12 @@ define('__CLIP__SETTING__', 2);
 define('__NAVBARSETTING__', array('最近编辑', '评论/回复', '设置'));
 define('__HREFSETTING__', array('editlog', 'comment', 'setting'));
 define('__REGISTER_ORDER__', array(
-    'invitationCode'=> 0,
-    'username' => 2,
-    'email' => 3,
-    'pass' => 4,
-    'passchk' => 5,
-    'fullname' => 6
+    'invitationCode'=> 2,
+    'username' => 6,
+    'email' => 9,
+    'pass' => 12,
+    'passchk' => 15,
+    'fullname' => 18
 ));
 
 
