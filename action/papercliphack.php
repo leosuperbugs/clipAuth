@@ -16,6 +16,7 @@ define('__CLIP__COMMENT__', 1);
 define('__CLIP__SETTING__', 2);
 define('__NAVBARSETTING__', array('最近编辑', '评论/回复', '设置'));
 define('__HREFSETTING__', array('editlog', 'comment', 'setting'));
+// The position of the metadata in the register form
 define('__REGISTER_ORDER__', array(
     'invitationCode'=> 2,
     'username' => 6,
@@ -71,6 +72,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         $controller->register_hook('COMMON_WIKIPAGE_SAVE', 'AFTER', $this, 'handle_common_wikipage_save');
         $controller->register_hook('TPL_CONTENT_DISPLAY', 'BEFORE', $this, 'handle_tpl_content_display');
         $controller->register_hook('HTML_REGISTERFORM_OUTPUT', 'BEFORE', $this, 'modifyRegisterForm');
+        $controller->register_hook('TPL_ACT_RENDER', 'AFTER', $this, 'handle_parser_metadata_render');
 //        $controller->register_hook('MENU_ITEMS_ASSEMBLY', 'AFTER', $this, 'handle_menu_items_assembly');
 //        $controller->register_hook('HTML_REGISTERFORM_OUTPUT', 'AFTER', $this, 'handle_html_registerform_output');
 //        $controller->register_hook('HTML_LOGINFORM_OUTPUT', 'AFTER', $this, 'handle_html_loginform_output');
@@ -78,23 +80,47 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
    
     }
 
+    public function handle_parser_metadata_render(Doku_Event $event, $param) {
+        global $ID;
+        // Append the author history here
+        $sql = 'select distinct editor from '.$this->settings['editlog'].' where pageid = :pageid group by editor order by max(time) desc';
+
+        try {
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':pageid', $ID);
+            $statement->execute();
+            $editors = array();
+            $count = 0;
+
+            while (($result = $statement->fetch(PDO::FETCH_ASSOC)) !== false) {
+                array_push($editors, $result['editor']);
+                $count += 1;
+            }
+            $editorList = implode(', ', $editors);
+            $editorTitle = $this->getConf('editors');
+
+            echo "<h1>$editorTitle<div class='paperclip__editbtn__wrapper'><span>$count 人</span></div></h1>";
+            echo "<p>$editorList</p>";
+        }
+        catch (PDOException $e) {
+
+        }
+    }
+    /**
+     * @param Doku_Event $event
+     * @param $param
+     */
     public function modifyRegisterForm(Doku_Event $event, $param)
     {
-        // Combined with the order of form
-        // If the order of form changed, this function must change
-        //    'invitationCode'=> 0,
-        //    'username' => 2,
-        //    'email' => 3,
-        //    'pass' => 4,
-        //    'passchk' => 5,
-        //    'fullname' => 6
-
         $registerFormContent =& $event->data->_content;
         $this->insertRegisterElements($registerFormContent);
-
-        echo '';
     }
 
+    /**
+     * @param $registerFormContent
+     *
+     * Modify the metadata in register form
+     */
     private function insertRegisterElements(&$registerFormContent)
     {
         // Invitation Code
@@ -112,8 +138,6 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         $registerFormContent[__REGISTER_ORDER__['passchk']]['maxlength'] = $this->getConf('passMaxLen');
         // Realname
         $registerFormContent[__REGISTER_ORDER__['fullname']]['maxlength'] = $this->getConf('fullnameMaxLen');
-
-
     }
 
     /**
