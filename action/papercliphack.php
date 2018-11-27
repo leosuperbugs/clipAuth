@@ -251,7 +251,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         }
         $time   = $replyData['time'];
         $comment= $replyData['comment'];
-        $replier= $replyData['parentname'];
+        $replier= $replyData['username'];
         $hash   = $replyData['hash'];
 
         print "
