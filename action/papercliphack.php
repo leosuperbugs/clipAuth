@@ -80,30 +80,41 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
    
     }
 
+    private function showEditorNames() {
+        global $ACT, $ID;
+        if ($ACT === 'show' && isset($ID)) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     public function handle_parser_metadata_render(Doku_Event $event, $param) {
         global $ID;
-        // Append the author history here
-        $sql = 'select distinct editor from '.$this->settings['editlog'].' where pageid = :pageid group by editor order by max(time) desc';
+        if ($this->showEditorNames()) {
+            // Append the author history here
+            $sql = 'select distinct editor from '.$this->settings['editlog'].' where pageid = :pageid group by editor order by max(time) desc';
 
-        try {
-            $statement = $this->pdo->prepare($sql);
-            $statement->bindValue(':pageid', $ID);
-            $statement->execute();
-            $editors = array();
-            $count = 0;
+            try {
+                $statement = $this->pdo->prepare($sql);
+                $statement->bindValue(':pageid', $ID);
+                $statement->execute();
+                $editors = array();
+                $count = 0;
 
-            while (($result = $statement->fetch(PDO::FETCH_ASSOC)) !== false) {
-                array_push($editors, $result['editor']);
-                $count += 1;
+                while (($result = $statement->fetch(PDO::FETCH_ASSOC)) !== false) {
+                    array_push($editors, $result['editor']);
+                    $count += 1;
+                }
+                $editorList = implode(', ', $editors);
+                $editorTitle = $this->getConf('editors');
+
+                echo "<h1>$editorTitle<div class='paperclip__editbtn__wrapper'><span>$count 人</span></div></h1>";
+                echo "<p>$editorList</p>";
             }
-            $editorList = implode(', ', $editors);
-            $editorTitle = $this->getConf('editors');
-
-            echo "<h1>$editorTitle<div class='paperclip__editbtn__wrapper'><span>$count 人</span></div></h1>";
-            echo "<p>$editorList</p>";
-        }
-        catch (PDOException $e) {
-
+            catch (PDOException $e) {
+                echo $e->getMessage();
+            }
         }
     }
     /**
