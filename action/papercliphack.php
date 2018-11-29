@@ -551,11 +551,15 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 
     public function handle_tpl_content_display(Doku_Event $event, $param)
     {
+        // Dispatch the customized behavior based on _GET
         global $_GET, $ACT;
         $show = $_GET['show'];
         global $USERINFO, $conf;
         $username = $USERINFO['name'];
         $pagenum = $_GET['page'];
+        // For search result
+        $q = $_GET['q'];
+        $result = $_GET['result'];
 
         if ($ACT === 'profile' || $show === 'editlog') {
             $event->data = '';
@@ -590,6 +594,17 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             print "<div class='paperclip__selfinfo'>";
             $this->setting();
             print "</div>";
+            exit;
+        } else if (isset($q)) {
+            // Display the search result
+            if ($result === 'title' || !isset($result)) {
+                // Display the result of title searching
+
+            }
+            elseif ($result === 'fulltext') {
+                // Display the result of fulltext searching
+
+            }
             exit;
         }
     }
