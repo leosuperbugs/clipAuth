@@ -522,7 +522,6 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         // check some exception
         global $USERINFO, $conf;
         $username = $USERINFO['name'];
-        $page = $this->checkPagenum($page, $this->countEditForName($username), '');
         if ($sum <= 0 || $page <= 0 || $sum < $page) {
             echo '';
         }
