@@ -678,7 +678,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         echo $html;
 
         $sum = ceil($counter / $this->editperpage);
-        $this->paginationNumber($sum, $pagenum, 'fulltext', array('q' => $QUERY));
+        $this->paginationNumber($sum, $pagenum, 'title', array('q' => $QUERY));
 
     }
 

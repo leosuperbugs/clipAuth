@@ -7,6 +7,7 @@
 .idea/
 conf/default.php
 conf/metadata.php
+.idea/*
 settings.php
 invite/insertSQL.sh
 _test/
