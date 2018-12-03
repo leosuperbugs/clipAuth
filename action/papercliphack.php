@@ -792,7 +792,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             $this->setting();
             print "</div>";
             exit;
-        } else if (isset($QUERY)) {
+        } else if ($QUERY) {
             $this->showSearchResult();
         }
     }
