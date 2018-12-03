@@ -16,3 +16,4 @@ $meta['passMinLen'] = array('numericopt');
 $meta['passMaxLen'] = array('numericopt');
 $meta['fullnameMaxLen'] = array('numericopt');
 $meta['editors'] = array('string');
+$meta['resultperpage'] = array('numericopt');

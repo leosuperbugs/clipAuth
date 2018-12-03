@@ -11,11 +11,18 @@ if (!defined('DOKU_INC')) {
     die();
 }
 
+// for personal center
+// show = xxx
 define('__CLIP__EDIT__', 0);
 define('__CLIP__COMMENT__', 1);
 define('__CLIP__SETTING__', 2);
-define('__NAVBARSETTING__', array('最近编辑', '评论/回复', '设置'));
-define('__HREFSETTING__', array('editlog', 'comment', 'setting'));
+// for search result
+// result = xxx
+define('__CLIP__TITLE__', 3);
+define('__CLIP__FULLTEXT__', 4);
+
+define('__NAVBARSETTING__', array('最近编辑', '评论/回复', '设置', '条目名称搜索', '条目内容搜索'));
+define('__HREFSETTING__', array('editlog', 'comment', 'setting', 'title', 'fulltext'));
 // The position of the metadata in the register form
 define('__REGISTER_ORDER__', array(
     'invitationCode'=> 2,
@@ -331,28 +338,45 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
      * @param $content Which part of navbar is printed
      * @param $highlight Which part of navbar is selected
      */
-    private function printNavbar ($content, $highlight) {
+    private function printNavbar ($content, $highlight, $href) {
         $isSelected = '';
         $navbarContent = __NAVBARSETTING__[$content];
-        $hrefContent = __HREFSETTING__[$content];
 
         if ($content === $highlight) {
             $isSelected = 'paperclip__selfinfo__selectednav';
         }
         print "<div class='paperclip__selfinfo__navbar $isSelected'>
-<a href='/doku.php?show=$hrefContent&page=1&id=start'>$navbarContent</a></div>";
+<a href= '$href'>$navbarContent</a></div>";
     }
 
     /**
      * Print the content of header part, switching according to $highlight
      * @param $highlight
      */
-    private function printHeader($highlight) {
+    private function printSelfinfoHeader($highlight) {
         if ($highlight >= __CLIP__EDIT__ && $highlight <= __CLIP__SETTING__) {
+            $hrefSetting = __HREFSETTING__;
             print "<div class='paperclip__selfinfo__header'>";
-            $this->printNavbar(__CLIP__EDIT__, $highlight);
-            $this->printNavbar(__CLIP__COMMENT__, $highlight);
-            $this->printNavbar(__CLIP__SETTING__, $highlight);
+            $this->printNavbar(__CLIP__EDIT__, $highlight, "/doku.php?show={$hrefSetting[__CLIP__EDIT__]}&page=1&id=start");
+            $this->printNavbar(__CLIP__COMMENT__, $highlight, "/doku.php?show={$hrefSetting[__CLIP__COMMENT__]}&page=1&id=start\"");
+            $this->printNavbar(__CLIP__SETTING__, $highlight, "/doku.php?show={$hrefSetting[__CLIP__SETTING__]}&page=1&id=start\"");
+
+            print "</div>";
+        }
+    }
+
+    /**
+     * Print the head nav bar of search result
+     *
+     * @param $highlight
+     */
+    private function printSearchHeader($highlight) {
+        if ($highlight >= __CLIP__TITLE__ && $highlight <= __CLIP__FULLTEXT__) {
+            global $QUERY;
+            $hrefSetting = __HREFSETTING__;
+            print "<div class='paperclip__selfinfo__header'>";
+            $this->printNavbar(__CLIP__TITLE__, $highlight, "/doku.php?q=$QUERY&show={$hrefSetting[__CLIP__TITLE__]}&page=1");
+            $this->printNavbar(__CLIP__FULLTEXT__, $highlight, "/doku.php?q=$QUERY&show={$hrefSetting[__CLIP__FULLTEXT__]}&page=1");
             print "</div>";
         }
     }
@@ -364,7 +388,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
      */
     private function editlog($pagenum) {
         // Out put the header part
-        $this->printHeader(__CLIP__EDIT__);
+        $this->printSelfinfoHeader(__CLIP__EDIT__);
         //
         global $USERINFO, $conf;
         $username = $USERINFO['name'];
@@ -398,8 +422,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     }
 
     private function comment($pagenum) {
-        // Fix me. Here we out put the content of comment page
-        $this->printHeader(__CLIP__COMMENT__);
+        $this->printSelfinfoHeader(__CLIP__COMMENT__);
 
         // Print the content of replying comment
         global $USERINFO, $conf;
@@ -437,8 +460,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     }
 
     private function setting() {
-        // Fix me. Here we out put the content of user setting
-        $this->printHeader(__CLIP__SETTING__);
+        $this->printSelfinfoHeader(__CLIP__SETTING__);
 
         global $USERINFO;
         $username = $USERINFO['name'];
@@ -457,8 +479,12 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
      * Print a new cell in the table
      * @param $page
      */
-    private function printOnePagenum ($page, $content) {
-        print "<td class='paperclip__pagenum'><a href='/doku.php?show=$content&page=$page' class='paperclip__pagehref'>$page</a></td>";
+    private function printOnePagenum ($page, $content, $additionalParam = []) {
+        $addiQuery = '';
+        foreach ($additionalParam as $param => $value) {
+            $addiQuery .= "&$param=$value";
+        }
+        print "<td class='paperclip__pagenum'><a href='/doku.php?show=$content&page=$page$addiQuery' class='paperclip__pagehref'>$page</a></td>";
     }
 
     private function printPresentPagenum ($page) {
@@ -476,11 +502,11 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
      * @param $start
      * @param $end The range includes the end
      */
-    private function printPageFromRange($start, $end, $content) {
+    private function printPageFromRange($start, $end, $content, $additionalParam = []) {
         if ($start > $end) return;
 
         for ($i = $start; $i <= $end; $i++) {
-            $this->printOnePagenum($i, $content);
+            $this->printOnePagenum($i, $content, $additionalParam);
         }
     }
 
@@ -490,8 +516,9 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
      *
      * @param $sum total page number
      * @param $page
+     * @param $content
      */
-    private function paginationNumber($sum, $page, $content) {
+    private function paginationNumber($sum, $page, $content, $additionalParam = []) {
         // check some exception
         global $USERINFO, $conf;
         $username = $USERINFO['name'];
@@ -507,14 +534,14 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             $left = $page - 1; // the left part of pagination list
             if ($left <= 4) {
                 if ($left > 0) {
-                    $this->printPageFromRange(1, $left, $content);
+                    $this->printPageFromRange(1, $left, $content, $additionalParam);
                 }
             } else {
                 // The table should look like:
                 // 1 ... 4 5
-                $this->printOnePagenum(1, $content);
+                $this->printOnePagenum(1, $content, $additionalParam);
                 $this->printEllipsis();
-                $this->printPageFromRange($left - 1, $left, $content);
+                $this->printPageFromRange($left - 1, $left, $content, $additionalParam);
             }
             //print centre part
             $this->printPresentPagenum($page);
@@ -522,41 +549,216 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             $right = $sum - $page;
             if ($right <= 4) {
                 if ($right > 0) {
-                    $this->printPageFromRange($page + 1, $sum, $content);
+                    $this->printPageFromRange($page + 1, $sum, $content, $additionalParam);
                 }
             } else {
                 // The table should look like:
                 // 7 8 ... 10
-                $this->printPageFromRange($page + 1, $page + 2, $content);
+                $this->printPageFromRange($page + 1, $page + 2, $content, $additionalParam);
                 $this->printEllipsis();
-                $this->printOnePagenum($sum, $content);
+                $this->printOnePagenum($sum, $content, $additionalParam);
             }
             // print the input and jump button
             print "
-<td class='paperclip__pagejump'>
-<form action='/doku.php' method='get'>
-<input type='text' class='paperclip__pagejump__input' name='page' required>
-<input type='hidden' name='show' value=$content> 
-<input type='submit' class='paperclip__pagejump__button' value='跳转'>
-</form>
-</td>";
+            <td class='paperclip__pagejump'>
+            <form action='/doku.php' method='get'>
+            <input type='text' class='paperclip__pagejump__input' name='page' required>
+            <input type='hidden' name='show' value=$content>";
+            foreach ($additionalParam as $param => $value) {
+                print "<input type='hidden' name=$param value=$value>";
+            }
+            print "<input type='submit' class='paperclip__pagejump__button' value='跳转'>
+            </form>
+            </td>";
             print "</tr></table></div>";
         }
     }
 
 
+    /**
+     *
+     * Display the content of each cell in search result
+     *
+     * @param $id
+     * @param $countInText
+     * @param $highlight
+     * @param $html
+     */
+    private function showMeta($id, $countInText, $highlight, &$html) {
+        global $lang;
 
+        // Comment part of search title result and search fulltext result
+        $goldspanPrefix = "<span class='paperclip__link'>";
+        $spanSuffix = "</span>";
+
+        $html .= "<div class='paperclip__qtitle'>";
+        $mtime = filemtime(wikiFN($id));
+        $time = date_iso8601($mtime);
+        $wikiIndex = $id;
+        $wikiIndex = explode(':', $wikiIndex);
+        $pageTitle = array_pop($wikiIndex);
+        $wikiIndex = implode("$spanSuffix-$goldspanPrefix", $wikiIndex);
+
+        $wikiIndex = $goldspanPrefix.$wikiIndex.$spanSuffix;
+
+        // Title
+        $html .= "<a href='/doku.php?id=$id'>$pageTitle</a>";
+        // Last edittion time and index
+        $html .= "<div class='paperclip__searchmeta'>";
+        // Last modification time
+        if ($countInText > 0) {
+            $html .= "<span>{$countInText}{$this->getLang('matches')}</span>";
+        }
+        $html .= "<span>{$lang['lastmod']}{$time}</span>";
+        $html .= "<span>{$this->getLang('index')}{$wikiIndex}</span>";
+        $html .= "</div>";
+
+        // Snippet
+        $resultBody = ft_snippet($id, $highlight);
+        $html .= "<p>{$resultBody}{$this->getLang('ellipsis')}</p>";
+        $html .= "</div>";
+
+    }
+
+    /**
+     *
+     * Do the pagination for the search results
+     *
+     * @param $fullTextResults
+     * @return array
+     */
+    private function cutResultInPages($fullTextResults) {
+        global $_GET;
+        $pagenum = $_GET['page'];
+
+        // pagination
+        $counter = count($fullTextResults);
+        $pagenum = $this->checkPagenum($pagenum, $counter, "");
+        // some vars to make my life easier
+        $editperpage = $this->editperpage;
+        $resultLeft = $counter - ($pagenum - 1) * $editperpage;
+
+        $fullTextResults = array_slice($fullTextResults, ($pagenum - 1) * $editperpage, $editperpage < $resultLeft ? $editperpage : $resultLeft );
+
+        return $fullTextResults;
+    }
+
+    /**
+     * Display the content of page title search result
+     *
+     * @param $pageLookupResults
+     * @param $highlight
+     */
+    private function showSearchOfPageTitle($pageLookupResults, $highlight)
+    {
+        // May be confusing here,
+        // $highlight here is used to mark the highlighted part of search result
+        // Not to indicate the highlighted nav bar
+
+        global $QUERY;
+        $counter = count($pageLookupResults);
+        $pagenum = $_GET['page'];
+
+        $pageLookupResults = $this->cutResultInPages($pageLookupResults);
+
+        $this->printSearchHeader(__CLIP__TITLE__);
+
+        $html = "";
+        $html .= "<div class='paperclip__qresult'>";
+        $html .= "<p class='paperclip__counter'>{$this->getLang('countPrefix')}{$counter}{$this->getLang('countSuffix')}</p>";
+
+        foreach ($pageLookupResults as $id => $title) {
+            $this->showMeta($id, 0, $highlight, $html);
+        }
+
+        $html .= "</div>";
+        echo $html;
+
+        $sum = ceil($counter / $this->editperpage);
+        $this->paginationNumber($sum, $pagenum, 'fulltext', array('q' => $QUERY));
+
+    }
+
+
+    /**
+     *
+     * Display the content of page fulltext search result
+     *
+     * @param $fullTextResults
+     * @param $highlight
+     */
+    private function showSearchOfFullText($fullTextResults, $highlight)
+    {
+        // May be confusing here,
+        // $highlight here is used to mark the highlighted part of search result
+        // Not to indicate the highlighted nav bar
+
+        global $QUERY, $_GET;
+        $pagenum = $_GET['page'];
+        $counter = count($fullTextResults);
+
+        $fullTextResults = $this->cutResultInPages($fullTextResults);
+
+        $this->printSearchHeader(__CLIP__FULLTEXT__);
+
+        $html = "";
+        $html .= "<div class='paperclip__qresult'>";
+        $html .= "<p class='paperclip__counter'>{$this->getLang('countPrefix')}{$counter}{$this->getLang('countSuffix')}</p>";
+
+        foreach ($fullTextResults as $id => $countInText) {
+            $this->showMeta($id, $countInText, $highlight, $html);
+        }
+
+        $html .= "</div>";
+        echo $html;
+
+        $sum = ceil($counter / $this->editperpage);
+        $this->paginationNumber($sum, $pagenum, 'fulltext', array('q' => $QUERY));
+    }
+
+    /**
+     * Show the search result in two sections
+     *
+     */
+    private function showSearchResult() {
+        // Display the search result
+        global $_GET, $INPUT, $QUERY, $ACT;
+        $show = $_GET['show'];
+
+        $after = $INPUT->str('min');
+        $before = $INPUT->str('max');
+        if ($show === 'title' || $ACT === 'search') {
+            // Display the result of title searching
+            $pageLookupResults = ft_pageLookup($QUERY, true, useHeading('navigation'), $after, $before);
+            $this->showSearchOfPageTitle($pageLookupResults, array());
+        }
+        elseif ($show === 'fulltext') {
+            // Display the result of fulltext searching
+            $highlight = array();
+            $fullTextResults = ft_pageSearch($QUERY, $highlight, $INPUT->str('srt'), $after, $before);
+            $this->showSearchOfFullText($fullTextResults, $highlight);
+        }
+        exit;
+    }
+
+
+    /**
+     *
+     * Dispatching inside this plugin
+     * Most of them are for customization
+     *
+     * @param Doku_Event $event
+     * @param $param
+     */
     public function handle_tpl_content_display(Doku_Event $event, $param)
     {
         // Dispatch the customized behavior based on _GET
         global $_GET, $ACT;
         $show = $_GET['show'];
-        global $USERINFO, $conf;
+        global $USERINFO, $conf, $QUERY;
         $username = $USERINFO['name'];
         $pagenum = $_GET['page'];
         // For search result
-        $q = $_GET['q'];
-        $result = $_GET['result'];
 
         if ($ACT === 'profile' || $show === 'editlog') {
             $event->data = '';
@@ -572,7 +774,6 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             } else {
                 $this->editlog(1);
                 $this->paginationNumber($sum, 1, 'editlog');
-//                $this->paginationNumber(10, 6);
             }
             print "</div>";
 
@@ -592,17 +793,8 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             $this->setting();
             print "</div>";
             exit;
-        } else if (isset($q)) {
-            // Display the search result
-            if ($result === 'title' || !isset($result)) {
-                // Display the result of title searching
-
-            }
-            elseif ($result === 'fulltext') {
-                // Display the result of fulltext searching
-
-            }
-            exit;
+        } else if (isset($QUERY)) {
+            $this->showSearchResult();
         }
     }
     public function handle_html_registerform_output(Doku_Event $event, $param)
