@@ -86,6 +86,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         $controller->register_hook('TPL_CONTENT_DISPLAY', 'BEFORE', $this, 'handle_tpl_content_display');
         $controller->register_hook('HTML_REGISTERFORM_OUTPUT', 'BEFORE', $this, 'modifyRegisterForm');
         $controller->register_hook('TPL_ACT_RENDER', 'AFTER', $this, 'handle_parser_metadata_render');
+        $controller->register_hook('TPL_CONTENT_DISPLAY', 'BEFORE', $this, 'clearWayForShow');
 //        $controller->register_hook('MENU_ITEMS_ASSEMBLY', 'AFTER', $this, 'handle_menu_items_assembly');
 //        $controller->register_hook('HTML_REGISTERFORM_OUTPUT', 'AFTER', $this, 'handle_html_registerform_output');
 //        $controller->register_hook('HTML_LOGINFORM_OUTPUT', 'AFTER', $this, 'handle_html_loginform_output');
@@ -93,9 +94,21 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
    
     }
 
+    public function clearWayForShow(Doku_Event $event, $param)
+    {
+        global $_GET;
+        $show = $_GET['show'];
+        if ($show) {
+            $event->data = '';
+        }
+    }
+
     private function showEditorNames() {
         global $ACT, $ID;
-        if ($ACT === 'show' && isset($ID)) {
+        global $_GET;
+        $show = $_GET['show'];
+
+        if ($ACT === 'show' && isset($ID) && !$show) {
             return true;
         } else {
             return false;
@@ -104,6 +117,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 
     public function handle_parser_metadata_render(Doku_Event $event, $param) {
         global $ID;
+
         if ($this->showEditorNames()) {
             // Append the author history here
             $sql = 'select distinct editor from '.$this->settings['editlog'].' where pageid = :pageid group by editor order by max(time) desc';
@@ -792,7 +806,6 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             $this->showSearchOfFullText($fullTextResults, $highlight);
         }
         echo '</div>';
-        exit;
     }
 
 
@@ -841,12 +854,10 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             $this->comment($pagenum);
             $this->paginationNumber($sum, $pagenum, 'comment');
             print "</div>";
-            exit;
         } else if ($show === 'setting') {
             print "<div class='paperclip__selfinfo'>";
             $this->setting();
             print "</div>";
-            exit;
         } else if ($QUERY) {
             $this->showSearchResult();
         }
