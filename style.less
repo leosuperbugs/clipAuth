@@ -131,13 +131,109 @@
   margin-right: 2 * @clipunit;
 }
 
-.paperclip__settings__title {
+@srchMargin: 5rem;
+@tinytext: 0.8rem;
+@lineMargin: 0.5rem;
+@btnSize: 2.5rem;
+@bgSize: 1.5rem;
 
+// for paperclip's search result
+.paperclip__search {
+  margin-top: @srchMargin;
+  .paperclip__srchrslt {
+    margin-bottom: @srchMargin;
+    font-size: 3rem;
+    font-weight: bolder;
+    color: __paperclip__stdbg__;
+    display: inline-block;
+  }
+
+  .paperclip__floatright {
+
+    fieldset.search-form {
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      text-align: left;
+      padding: 0;
+
+      border: none;
+      width: 40vw !important;
+      margin: 0 !important;
+
+      input {
+        width: 80% !important;
+        margin: @lineMargin 0;
+        padding: @lineMargin 1rem;
+        border: none;
+        border-bottom: 3px solid __paperclip__stdbg__;
+      }
+
+      button[type=submit] {
+        height: @btnSize;
+        width: @btnSize;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        background-color: transparent;
+        background-image: url("/lib/tpl/starter/images/home/search-new.svg");
+        background-repeat: no-repeat;
+        background-position: center;
+        border: none;
+
+      }
+    }
+
+    .paperclip__srchhint {
+      font-size: @tinytext;
+      font-weight: bold;
+      color: __paperclip__comment__;
+    }
+    float: right;
+  }
+
+  .paperclip__qresult {
+    width: 70vw;
+    .paperclip__counter {
+      margin-bottom: 0;
+      font-size: @tinytext;
+      font-weight: bold;
+      color: __paperclip__textarea__;
+    }
+  }
+
+  .paperclip__qtitle {
+    a {
+      color: __paperclip__gold__;
+      font-size: 1.25rem;
+      margin-bottom: @lineMargin;
+    }
+    .paperclip__searchmeta {
+      margin: @lineMargin 0;
+      font-size: @tinytext;
+      color: __paperclip__stdbg__;
+
+      .paperclip__lastmod {
+        margin-right: 1rem;
+      }
+    }
+    p strong.search_hit {
+      background-color: __paperclip__gold__;
+    }
+  }
+
+  .paperclip__pagenav {
+    float: left;
+  }
 
 }
 
 
 
+
+.dokuwiki .search-results-form fieldset.search-form button.toggleAssistant {
+  display: none;
+}
 .noshow {
   display: none;
 }
