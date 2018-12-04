@@ -6,6 +6,12 @@
  * @author  Tongyu Nie <marktnie@gmail.com>
  */
 
+
+use \dokuwiki\Form\Form;
+use \dokuwiki\Ui;
+
+
+
 // must be run within Dokuwiki
 if (!defined('DOKU_INC')) {
     die();
@@ -323,8 +329,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         global $conf;
         if (!isset($pagenum)) return 1;
 
-        $num = $count;
-        $maxnum = ceil($num / $this->editperpage);
+        $maxnum = ceil($count / $this->editperpage);
         if ($pagenum > $maxnum) {
             $pagenum = $maxnum;
         } elseif ($pagenum < 1) {
@@ -601,14 +606,14 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         $wikiIndex = $goldspanPrefix.$wikiIndex.$spanSuffix;
 
         // Title
-        $html .= "<a href='/doku.php?id=$id'>$pageTitle</a>";
+        $html .= "<a href='/doku.php?id=$id' target='_blank'>$pageTitle</a>";
         // Last edittion time and index
         $html .= "<div class='paperclip__searchmeta'>";
         // Last modification time
         if ($countInText > 0) {
             $html .= "<span>{$countInText}{$this->getLang('matches')}</span>";
         }
-        $html .= "<span>{$lang['lastmod']}{$time}</span>";
+        $html .= "<span class='paperclip__lastmod'>{$lang['lastmod']}{$time}</span>";
         $html .= "<span>{$this->getLang('index')}{$wikiIndex}</span>";
         $html .= "</div>";
 
@@ -657,6 +662,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         global $QUERY;
         $counter = count($pageLookupResults);
         $pagenum = $_GET['page'];
+        $pagenum = $this->checkPagenum($pagenum, $counter, '');
 
         $pageLookupResults = $this->cutResultInPages($pageLookupResults);
 
@@ -693,8 +699,9 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         // Not to indicate the highlighted nav bar
 
         global $QUERY, $_GET;
-        $pagenum = $_GET['page'];
         $counter = count($fullTextResults);
+        $pagenum = $_GET['page'];
+        $pagenum = $this->checkPagenum($pagenum, $counter, '');
 
         $fullTextResults = $this->cutResultInPages($fullTextResults);
 
@@ -715,6 +722,41 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         $this->paginationNumber($sum, $pagenum, 'fulltext', array('q' => $QUERY));
     }
 
+
+    /**
+     * Get a form which can be used to adjust/refine the search
+     *
+     * @param string $query
+     *
+     * @return string
+     */
+    protected function getSearchFormHTML($query)
+    {
+        global $lang, $ID, $INPUT;
+
+        $searchForm = (new Form(['method' => 'get'], true))->addClass('search-results-form');
+        $searchForm->setHiddenField('do', 'search');
+        $searchForm->setHiddenField('id', $ID);
+        $searchForm->setHiddenField('sf', '1');
+        if ($INPUT->has('min')) {
+            $searchForm->setHiddenField('min', $INPUT->str('min'));
+        }
+        if ($INPUT->has('max')) {
+            $searchForm->setHiddenField('max', $INPUT->str('max'));
+        }
+        if ($INPUT->has('srt')) {
+            $searchForm->setHiddenField('srt', $INPUT->str('srt'));
+        }
+        $searchForm->addFieldsetOpen()->addClass('search-form');
+        $searchForm->addTextInput('q')->val($query)->useInput(false);
+        $searchForm->addButton('', $lang['btn_search'])->attr('type', 'submit');
+
+        $searchForm->addFieldsetClose();
+
+        return $searchForm->toHTML();
+    }
+
+
     /**
      * Show the search result in two sections
      *
@@ -723,9 +765,18 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         // Display the search result
         global $_GET, $INPUT, $QUERY, $ACT;
         $show = $_GET['show'];
-
         $after = $INPUT->str('min');
         $before = $INPUT->str('max');
+
+        echo "<div class='paperclip__search'>";
+        echo "<div class='paperclip__srchhead'>";
+        echo "<div class='paperclip__srchrslt'>{$this->getLang('searchResult')}</div>";
+        echo "<div class='paperclip__floatright'>";
+        echo $this->getSearchFormHTML($QUERY);
+        echo "<p class='paperclip__srchhint'>{$this->getLang('searchHint')}</p></div>";
+        echo '</div>';
+
+
         if ($show === 'title' || $ACT === 'search') {
             // Display the result of title searching
             $pageLookupResults = ft_pageLookup($QUERY, true, useHeading('navigation'), $after, $before);
@@ -737,6 +788,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             $fullTextResults = ft_pageSearch($QUERY, $highlight, $INPUT->str('srt'), $after, $before);
             $this->showSearchOfFullText($fullTextResults, $highlight);
         }
+        echo '</div>';
         exit;
     }
 
