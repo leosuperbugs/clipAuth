@@ -52,7 +52,8 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
         try {
             $this->pdo = new PDO($dsn, $this->settings['username'], $this->settings['password']);
         } catch ( PDOException $e) {
-            echo "Datebase connection error";
+            echo "Dateebase connection error\n";
+            echo $e->getMessage();
             $this->success = false;
             exit;
         }

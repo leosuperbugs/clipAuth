@@ -9,7 +9,9 @@
 
 use \dokuwiki\Form\Form;
 use \dokuwiki\Ui;
+use \dokuwiki\paperclip;
 
+include dirname(__FILE__).'/../paperclipDAO.php';
 
 
 // must be run within Dokuwiki
@@ -53,10 +55,16 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 
     private $order;
 
+    // paperclip's own DAO
+    private $dao;
+
     public function __construct()
     {
         $this->editperpage = $this->getConf('editperpage');
         $this->replyperpage = $this->getConf('commentperpage');
+
+        $this->dao = new dokuwiki\paperclip\paperclipDAO();
+
         require  dirname(__FILE__).'/../settings.php';
         $dsn = "mysql:host=".$this->settings['host'].
             ";dbname=".$this->settings['dbname'].
@@ -66,7 +74,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         try {
             $this->pdo = new PDO($dsn, $this->settings['username'], $this->settings['password']);
         } catch ( PDOException $e) {
-            echo "Datebase connection error";
+            echo $e->getMessage();
             exit;
         }
     }
@@ -81,11 +89,37 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     public function register(Doku_Event_Handler $controller)
     {
 
-        $controller->register_hook('COMMON_WIKIPAGE_SAVE', 'AFTER', $this, 'handle_common_wikipage_save');
-        $controller->register_hook('TPL_CONTENT_DISPLAY', 'BEFORE', $this, 'handle_tpl_content_display');
-        $controller->register_hook('HTML_REGISTERFORM_OUTPUT', 'BEFORE', $this, 'modifyRegisterForm');
-        $controller->register_hook('TPL_ACT_RENDER', 'AFTER', $this, 'handle_parser_metadata_render');
-        $controller->register_hook('TPL_CONTENT_DISPLAY', 'BEFORE', $this, 'clearWayForShow');
+        $controller->register_hook(
+            'COMMON_WIKIPAGE_SAVE',
+            'AFTER', $this,
+            'handle_common_wikipage_save'
+        );
+        $controller->register_hook(
+            'TPL_CONTENT_DISPLAY',
+            'BEFORE',
+            $this,
+            'handle_tpl_content_display'
+        );
+        $controller->register_hook(
+            'HTML_REGISTERFORM_OUTPUT',
+            'BEFORE',
+            $this,
+            'modifyRegisterForm'
+        );
+        $controller->register_hook(
+            'TPL_ACT_RENDER',
+            'AFTER',
+            $this,
+            'handle_parser_metadata_render',
+            array(),
+            -PHP_INT_MAX
+        );
+        $controller->register_hook(
+            'TPL_CONTENT_DISPLAY',
+            'BEFORE',
+            $this,
+            'clearWayForShow'
+        );
 //        $controller->register_hook('MENU_ITEMS_ASSEMBLY', 'AFTER', $this, 'handle_menu_items_assembly');
 //        $controller->register_hook('HTML_REGISTERFORM_OUTPUT', 'AFTER', $this, 'handle_html_registerform_output');
 //        $controller->register_hook('HTML_LOGINFORM_OUTPUT', 'AFTER', $this, 'handle_html_loginform_output');
@@ -119,28 +153,13 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 
         if ($this->showEditorNames()) {
             // Append the author history here
-            $sql = 'select distinct editor from '.$this->settings['editlog'].' where pageid = :pageid group by editor order by max(time) desc';
+            $editorTitle = $this->getConf('editors');
 
-            try {
-                $statement = $this->pdo->prepare($sql);
-                $statement->bindValue(':pageid', $ID);
-                $statement->execute();
-                $editors = array();
-                $count = 0;
+            $editorList = '';
+            $count = $this->dao->getEditorNames($editorList);
 
-                while (($result = $statement->fetch(PDO::FETCH_ASSOC)) !== false) {
-                    array_push($editors, $result['editor']);
-                    $count += 1;
-                }
-                $editorList = implode(', ', $editors);
-                $editorTitle = $this->getConf('editors');
-
-                echo "<h1>$editorTitle<div class='paperclip__editbtn__wrapper'><span>$count 人</span></div></h1>";
-                echo "<p>$editorList</p>";
-            }
-            catch (PDOException $e) {
-                echo $e->getMessage();
-            }
+            echo "<h1>$editorTitle<div class='paperclip__editbtn__wrapper'><span>$count 人</span></div></h1>";
+            echo "<p>$editorList</p>";
         }
     }
     /**
@@ -191,28 +210,15 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     public function handle_common_wikipage_save(Doku_Event $event, $param)
     {
         global $INFO;
+
         $pageid = $event->data['id'];
         $summary = $event->data['summary'];
         $editor = $INFO['userinfo']['name'];
-        $sql = 'insert into '.$this->settings['editlog'].' (id, pageid, time, summary, editor)
-            values
-                (null, :pageid, null, :summary, :editor)';
-        try {
-            $statement = $this->pdo->prepare($sql);
-            $statement->bindValue(':pageid', $pageid);
-            $statement->bindValue(':summary', $summary);
-            $statement->bindValue(':editor', $editor);
-            $result = $statement->execute();
-        }
-        catch (PDOException $e){
-            echo $e->getMessage();
-        }
-        if ($result === false) {
-            echo 'log error';
-            exit;
-        }
 
-
+        $result = $this->dao->insertEditlog($pageid, $summary, $editor);
+        if (!$result) {
+            echo 'wikipage_save: failed to add editlog into DB';
+        }
     }
 
     /**
@@ -312,11 +318,8 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     private function countEditForName($username) {
         if (isset($this->editRecordNum)) return $this->editRecordNum;
 
-        $sql = 'select count(*) from '.$this->settings['editlog']. ' where editor = '."\"".$username."\"";
-        $result = $this->pdo->query($sql);
+        $num = $this->dao->countRow(array('editor' => $username), $this->settings['editlog']);
 
-        if ($result === false) return 1;
-        $num = $result->fetchColumn();
         return $num;
     }
 
@@ -328,11 +331,8 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     private  function countReplyForName($username) {
         if (isset($this->replyRecordNum)) return $this->replyRecordNum;
 
-        $sql = 'select count(*) from '.$this->settings['comment']. ' where parentname ='."\"".$username."\"";
-        $result = $this->pdo->query($sql);
+        $num = $this->dao->countRow(array('parentname' => $username), $this->settings['comment']);
 
-        if ($result === false) return 1;
-        $num = $result->fetchColumn();
         return $num;
     }
 
@@ -416,17 +416,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         $offset = ($pagenum - 1) * $this->editperpage;
         $countPage = $this->editperpage;
 
-        $sql = 'select * from '.$this->settings['editlog'].' where editor=:editor order by id DESC limit :offset ,:count';
-        try {
-            $statement = $this->pdo->prepare($sql);
-            $statement->bindValue(':editor', $username);
-            $statement->bindValue(':offset', $offset, PDO::PARAM_INT);
-            $statement->bindValue(':count', $countPage, PDO::PARAM_INT);
-            $r = $statement->execute();
-        }
-        catch (PDOException $e){
-            echo $e->getMessage();
-        }
+        $statement = $this->dao->getEditlog($username,$offset,$countPage);
         $isFirst = true;
 
         while (($result = $statement->fetch(PDO::FETCH_ASSOC)) !== false) {
@@ -451,17 +441,8 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         $offset = ($pagenum - 1) * $this->replyperpage;
         $countPage = $this->replyperpage;
 
-        $sql = 'select * from '.$this->settings['comment'].' where parentname = :parentname order by time DESC limit :offset, :count';
-        try {
-            $statement = $this->pdo->prepare($sql);
-            $statement->bindValue(':parentname', $username);
-            $statement->bindValue(':offset', $offset, PDO::PARAM_INT);
-            $statement->bindValue(':count', $countPage, PDO::PARAM_INT);
-            $r = $statement->execute();
-        }
-        catch (PDOException $e){
-            echo $e->getMessage();
-        }
+        $statement = $this->dao->getComment($username, $offset, $countPage);
+
         $isFirst = true;
 
         while (($result = $statement->fetch(PDO::FETCH_ASSOC)) !== false) {
