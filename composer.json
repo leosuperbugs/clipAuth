@@ -1,11 +1,10 @@
 {
-	"require": {
-		"doctrine/orm" : "*",
-		"symfony/yaml" : "2.*"
-	},
-	"autoload" : {
-		"psr-0": {
-			"" : "src/"
-		}
-	}
+    "require": {
+        "caxy/php-htmldiff": "^0.1.7"
+    },
+    "autoload": {
+	"psr-0": {
+		"": "src/"
+        }
+    }
 }
