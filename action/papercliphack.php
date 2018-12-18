@@ -6,10 +6,13 @@
  * @author  Tongyu Nie <marktnie@gmail.com>
  */
 
+require dirname(__FILE__).'/../vendor/autoload.php';
 
 use \dokuwiki\Form\Form;
 use \dokuwiki\Ui;
 use \dokuwiki\paperclip;
+use Caxy\HtmlDiff\HtmlDiff;
+
 
 include dirname(__FILE__).'/../paperclipDAO.php';
 
@@ -214,8 +217,22 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         $pageid = $event->data['id'];
         $summary = $event->data['summary'];
         $editor = $INFO['userinfo']['name'];
+        $htmlDiff = new HtmlDiff($event->data['oldContent'], $event->data['newContent']);
+        $content = $htmlDiff->build();
+        $content = '<?xml version="1.0" encoding="UTF-8"?><div>'.$content.'</div>';
 
-        $result = $this->dao->insertEditlog($pageid, $summary, $editor);
+        $dom = new DOMDocument;
+        $editSummary = '';
+        if ($dom->loadXML($content)) {
+            $xpath = new DOMXPath($dom);
+            $difftext = $xpath->query('ins |del');
+
+            foreach ($difftext as $wtf) {
+                $nodeName = $wtf->nodeName;
+                $editSummary .= "<$nodeName>".$wtf->nodeValue."</$nodeName>";
+            }
+        }
+        $result = $this->dao->insertEditlog($pageid, $editSummary, $editor);
         if (!$result) {
             echo 'wikipage_save: failed to add editlog into DB';
         }
