@@ -976,7 +976,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
                     echo '<br>还没有编辑记录<br>';
                 }
 
-                $sum = ceil($countFullEditlog / $countPage);
+                $sum = ceil($countFullEditlog / $this->editperpage);
                 $this->paginationNumber($sum, $pagenum, 'alledit');
 
             } else if ($show === 'addcom') {
