@@ -228,6 +228,58 @@
 
 }
 
+@clipAdminUnit : 0.5 * @clipunit;
+
+.paperclip__admin {
+  margin-top: @srchMargin;
+
+  .paperclip__adminProcess {
+    margin-bottom: @clipunit;
+    span {
+      margin-right: 2 * @clipunit;
+    }
+
+    select {
+      margin-left: 4 * @clipunit;
+    }
+
+    // Care about space here
+    input[type=submit] {
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      border: none;
+      text-decoration: underline;
+      color: __paperclip__gold__;
+      margin-right: @clipunit;
+    }
+  }
+  .paperclip__editorInfo {
+    span {
+      margin-right: 2 * @clipunit;
+    }
+    margin-bottom: @clipAdminUnit;
+  }
+  .paperclip__userState {
+    margin-bottom: @clipAdminUnit;
+  }
+  .paperclip__editlog__unit {
+    .paperclip__editlog__header {
+      margin-bottom: @clipAdminUnit;
+      .paperclip__editlog__pageid {
+        font-size: @clipunit;
+        font-weight: bold;
+      }
+      .paperclip__editlog__time {
+        display: none;
+      }
+    }
+    .paperclip__editlog__sum {
+      margin-bottom: 0;
+      padding: @clipAdminUnit 0;
+    }
+  }
+}
 
 
 
