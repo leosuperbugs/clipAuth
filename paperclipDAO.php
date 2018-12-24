@@ -114,9 +114,14 @@ class paperclipDAO
      * @return int|mixed count result
      */
     public function countRow($cond, $tablename) {
-        $cond = $this->conditionsToString($cond);
+        if ($cond) {
+            $cond = $this->conditionsToString($cond);
+        }
         try {
-            $sql = 'select count(*) from '.$this->settings[$tablename]. ' where '.$cond;
+            $sql = 'select count(*) from '.$this->settings[$tablename];
+            if ($cond) {
+                $sql .= ' where '.$cond;
+            }
             $result = $this->pdo->query($sql);
         } catch (PDOException $e) {
             echo $e->getMessage();
@@ -130,6 +135,54 @@ class paperclipDAO
     }
 
     /**
+     * Data access for editlog admin
+     *
+     * @param $offset
+     * @param $countPage
+     * @param string $conditions After the where statement
+     * @return bool|\PDOStatement
+     */
+    public function getEditlogWithUserInfo($offset, $countPage, $conditions='') {
+        try {
+//            $sql = "select @editor=:editor;";
+//            $statement = $this->pdo->prepare($sql);
+//            $statement->bindValue(':editor', $username);
+//            $statement->execute();
+            $editlog = $this->settings['editlog'];
+            $users = $this->settings['usersinfo'];
+
+
+
+            $sql = "select 
+                    $editlog.id as editlogid,
+                    $editlog.pageid,
+                    $editlog.time,
+                    $editlog.summary,
+                    $editlog.editor,
+                    $users.realname,
+                    $users.id as editorid,
+                    $users.mailaddr,
+                    $users.identity
+            from $editlog inner join $users on $editlog.editor = $users.realname";
+
+            if ($conditions) {
+                $sql .= " where $conditions";
+            }
+            $sql .= " order by $editlog.id DESC limit :offset ,:count";
+
+            $statement = $this->pdo->prepare($sql);
+            // Be careful about the data_type next time!
+            $statement->bindValue(":offset", $offset, PDO::PARAM_INT);
+            $statement->bindValue(":count", $countPage, PDO::PARAM_INT);
+            $statement->execute();
+        } catch (PDOException $e) {
+            echo $e->getMessage();
+            return false;
+        }
+        return $statement;
+    }
+
+    /**
      * Get the editlog for the users by page
      *
      * @param $username
@@ -138,10 +191,14 @@ class paperclipDAO
      * @return bool|null|\PDOStatement
      */
     public function getEditlog($username, $offset, $countPage) {
-        $sql = 'select * from '.$this->settings['editlog'].' where editor=:editor order by id DESC limit :offset ,:count';
+        $sql = "select @editor=:editor;";
+        $statement = $this->pdo->prepare($sql);
+        $statement->bindValue(':editor', $username);
+        $statement->execute();
+
+        $sql = 'select * from '.$this->settings['editlog'].' where @editor is null or editor=@editor order by id DESC limit :offset ,:count';
         try {
             $statement = $this->pdo->prepare($sql);
-            $statement->bindValue(':editor', $username);
             $statement->bindValue(':offset', $offset, PDO::PARAM_INT);
             $statement->bindValue(':count', $countPage, PDO::PARAM_INT);
             $r = $statement->execute();
@@ -180,5 +237,55 @@ class paperclipDAO
     }
 
 
+    /**
+     * Set user identity to new Identity
+     *
+     * @param $id User ID
+     * @param $newIdendity
+     * @return bool
+     */
+    public function setIdentity($id, $newIdendity) {
+        $sql = "update {$this->settings['usersinfo']} set identity=:identity where id=:id";
+        try {
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(":identity", $newIdendity);
+            $statement->bindValue(":id", $id);
+
+            $result = $statement->execute();
+            return $result;
+        } catch (\PDOException $e) {
+            echo $e->getMessage();
+        }
+    }
+
+    /**
+     * Add record of mute execution
+     *
+     * @param $userid
+     * @param $mutedays
+     * @param $prevIdentity
+     * @param $operator
+     * @return bool
+     */
+    public function addMuteRecord($userid, $mutedays, $prevIdentity, $operator) {
+        $sql = "insert into {$this->settings['mutelog']} 
+                  (recordid, id, time, mutedates, identity, operator) 
+                values 
+                  (null, :id, null, :mutedays, :prevIdentity, :operator)";
+        try {
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(":id", $userid);
+            $statement->bindValue(":mutedays", $mutedays);
+            $statement->bindValue(":prevIdentity", $prevIdentity);
+            $statement->bindValue(":operator", $operator);
+            $result = $statement->execute();
+
+            return $result;
+        } catch (\PDOException $e) {
+            echo "add mute record error";
+            echo $e->getMessage();
+        }
+
+    }
 
 }
