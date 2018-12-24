@@ -467,11 +467,10 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
      *
      * @return  array
      */
-    //public function retrieveGroups($start = 0, $limit = 0)
-    //{
-        // FIXME implement
-    //    return array();
-    //}
+    public function retrieveGroups($start = 0, $limit = 0)
+    {
+        return array("admin", "user", "muted", "nuked");
+    }
 
     /**
      * Return case sensitivity of the backend
