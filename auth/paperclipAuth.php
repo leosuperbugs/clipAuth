@@ -11,16 +11,12 @@ if (!defined('DOKU_INC')) {
     die();
 }
 
-//require_once $dir . "/../vendor/autoload.php";
-//use Doctrine\ORM\Tools\Setup;
-//use Doctrine\ORM\EntityManager;
-
 class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
 {
 
-//    var $sql; // the database server
     var $pdo;
     var $settings;
+    var $dao;
 
     /**
      * Constructor.
@@ -42,21 +38,23 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
         $this->cando['getGroups']   = true; // can a list of available groups be retrieved?
 //        $this->cando['external']    = true; // does the module do external auth checking?
         $this->cando['logout']      = true; // can the user logout again? (eg. not possible with HTTP auth)
-        // connect to the MySQL
-        require dirname(__FILE__).'/../settings.php';
-        $dsn = "mysql:host=".$this->settings['host'].
-            ";dbname=".$this->settings['dbname'].
-            ";port=".$this->settings['port'].
-            ";charset=".$this->settings['charset'];
+//        // connect to the MySQL
+//        require dirname(__FILE__).'/../settings.php';
+//        $dsn = "mysql:host=".$this->settings['host'].
+//            ";dbname=".$this->settings['dbname'].
+//            ";port=".$this->settings['port'].
+//            ";charset=".$this->settings['charset'];
+//
+//        try {
+//            $this->pdo = new PDO($dsn, $this->settings['username'], $this->settings['password']);
+//        } catch ( PDOException $e) {
+//            echo "Dateebase connection error\n";
+//            echo $e->getMessage();
+//            $this->success = false;
+//            exit;
+//        }
 
-        try {
-            $this->pdo = new PDO($dsn, $this->settings['username'], $this->settings['password']);
-        } catch ( PDOException $e) {
-            echo "Dateebase connection error\n";
-            echo $e->getMessage();
-            $this->success = false;
-            exit;
-        }
+        $this->dao = new dokuwiki\paperclip\paperclipDAO();
 
         $this->success = true;
     }
@@ -123,23 +121,17 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
                 $user = $userinfo['user'];
             } else {
                 $userinfo = $this->getUserData($user);
+
             }
             // begin to verify
+            // block nuked users and save the muted users
+
             if ($userinfo !== false) {
                 return auth_verifyPassword($pass, $userinfo['pass']);
             } else {
                 return false;
             }
         }
-    }
-
-    private  function  transferResult ($result) {
-       return [
-            'pass' => $result['password'],
-            'name' => $result['realname'],
-            'mail' => $result['mailaddr'],
-            'grps' => array_filter(explode(',', $result['identity']))
-        ];
     }
 
     /**
@@ -159,41 +151,12 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
      */
     public function getUserData($user, $requireGroups=true)
     {
-        // FIXME implement
-        $sql = 'select * from '.$this->settings['usersinfo'].' where username = :username';
-        $statement = $this->pdo->prepare($sql);
-        $statement->bindValue(':username', $user);
-        $statement->execute();
-
-        $result = $statement->fetch(PDO::FETCH_ASSOC);
-
-        if ($result == false) {
-            return false;
-        }
-
-        $userinfo = $this->transferResult($result);
-
-        return $userinfo;
+        return $this->dao->getUserData($user);
     }
 
     private function getUserDataByEmail($email)
     {
-        $sql = 'select * from '.$this->settings['usersinfo'].' where mailaddr = :email';
-        $statement = $this->pdo->prepare($sql);
-        $statement->bindValue(':email', $email);
-        $statement->execute();
-
-        $result = $statement->fetch(PDO::FETCH_ASSOC);
-
-        if ($result == false) {
-            return false;
-        }
-
-        $name = $result['username'];
-        $userinfo = $this->transferResult($result);
-        $userinfo['user'] = $name;
-
-        return $userinfo;
+        return $this->dao->getUserDataByEmail($email);
 
     }
 
@@ -225,15 +188,11 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
             return false;
         }
 
+        $invitation = $pass['invitation'];
         // if the user does not exist
         // check the invitation code
         if ($conf['needInvitation'] == 0) {
-            $invitation = $pass['invitation'];
-            $sql = 'select * from '.$this->settings['invitationCode'].' where invitationCode = :code';
-            $statement = $this->pdo->prepare($sql);
-            $statement->bindValue(':code', $invitation);
-            $statement->execute();
-            $result = $statement->fetch(PDO::FETCH_ASSOC);
+            $result = $this->dao->checkInvtCode($invitation);
             // the code should be valid and haven't been used
             if ($result === false || $result['isUsed'] == 1) {
                 // return false as user has already been registered
@@ -241,33 +200,17 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
             }
             $pass = $pass['pass'];
         }
-        // create the user in database
-        $sql = "insert into ".$this->settings['usersinfo'].
-            "(id, username, password, realname, mailaddr, identity)
-            values
-            (null, :user, :pass, :name, :mail, :grps)";
-        $statement = $this->pdo->prepare($sql);
-        $statement->bindValue(':user', $user);
         $pass = auth_cryptPassword($pass);
-        $statement->bindValue(':pass', $pass);
-        $statement->bindValue(':name', $name);
-        $statement->bindValue(':mail', $mail);
         // set default group if no groups specified
         if(!is_array($grps)) $grps = array($conf['defaultgroup']);
         $grps = join(',', $grps);
 
-        $statement->bindValue(':grps', $grps);
-
-        $result = $statement->execute();
+        $result = $this->dao->addUser($user, $pass, $name, $mail, $grps);
 
         if ($result === true) {
-            // set the invitation code to invalid
-            $sql = "update code set isUsed = 1 where invitationCode = :code";
-            $statement = $this->pdo->prepare($sql);
-            $statement->bindValue(':code', $invitation);
-            $result = $statement->execute();
-
-            echo  $result;
+            if ($conf['needInvitation'] == 0) {
+                $this->dao->setInvtCodeToInvalid($invitation);
+            }
             return true;
         }
         else {
@@ -290,12 +233,7 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
         if ($this->getUserData($user) !== false) {
             if (isset($changes['pass'])) {
                 $pass = auth_cryptPassword($changes['pass']);
-                $sql = "update ".$this->settings['usersinfo'] ." set password = :pass where username = :user";
-                $statement = $this->pdo->prepare($sql);
-                $statement->bindValue(':pass', $pass);
-                $statement->bindValue(':user', $user);
-                $result = $statement->execute();
-
+                $result = $this->dao->setUserInfo($user, $pass);
                 return $result;
 
             }
@@ -318,11 +256,7 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
         $counter = 0;
         foreach ($users as $user) {
             if ($this->getUserData($user) !== false) {
-                $sql = "delete from " . $this->settings['usersinfo'] . " where username = :username";
-                $statement = $this->pdo-prepare($sql);
-                $statement->bindValue(':username', $user);
-                $result = $statement->execute();
-
+                $result = $this->dao->deleteUser($user);
                 if ($result) $counter += 1;
             }
 
@@ -336,6 +270,21 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
         'mail' => 'mailaddr',
         'grps' => 'identity'
     ];
+    /**
+     * Simple transfer of array
+     *
+     * @param $result
+     * @return array
+     */
+    private  function  transferResult ($result) {
+        return [
+            'pass' => $result['password'],
+            'name' => $result['realname'],
+            'mail' => $result['mailaddr'],
+            'id'   => $result['id'],
+            'grps' => array_filter(explode(',', $result['identity']))
+        ];
+    }
 
     private function processOnefield($filter, $fieldname, &$conditions) {
         if ($filter[$fieldname]) {
@@ -376,14 +325,7 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
     private  function  _retrieveUsers($filter) {
         $conditions = $this->_filter($filter);
 
-        if (count($conditions) > 0) {
-            $condArr = implode(' OR ', $conditions);
-            $sql = 'select * from '. $this->settings['usersinfo'] . " where ". $condArr;
-        } else {
-            $sql = 'select * from '. $this->settings['usersinfo'];
-        }
-        $statement = $this->pdo->prepare($sql);
-        $statement->execute();
+        $statement = $this->dao->getUsers($conditions);
 
         return $statement;
 
@@ -392,17 +334,7 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
     private  function _countUsers($filter) {
         $conditions = $this->_filter($filter);
 
-        if (count($conditions) > 0) {
-            $condArr = implode(' OR ', $conditions);
-            $sql = 'select count(*) from '. $this->settings['usersinfo'] . " where ". $condArr;
-        } else {
-            $sql = 'select count(*) from '. $this->settings['usersinfo'];
-        }
-        $result = $this->pdo->query($sql);
-        if ($result === false) return 0;
-        $num = $result->fetchColumn();
-
-        return $num;
+        return $this->dao->countUsers($conditions);
     }
     /**
      * Bulk retrieval of user data [implement only where required/possible]
