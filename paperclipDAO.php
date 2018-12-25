@@ -17,7 +17,7 @@ class paperclipDAO
 
     public function __construct()
     {
-        require_once dirname(__FILE__).'/settings.php';
+        require dirname(__FILE__).'/settings.php';
 
         $dsn = "mysql:host=".$this->settings['host'].
             ";dbname=".$this->settings['dbname'].
@@ -30,6 +30,167 @@ class paperclipDAO
             echo $e->getMessage();
             exit;
         }
+    }
+
+    /**
+     * Add record of mute execution
+     *
+     * @param $userid
+     * @param $mutedays
+     * @param $prevIdentity
+     * @param $operator
+     * @return bool
+     */
+    public function addMuteRecord($userid, $mutedays, $prevIdentity, $operator) {
+        $sql = "insert into {$this->settings['mutelog']} 
+                  (recordid, id, time, mutedates, identity, operator) 
+                values 
+                  (null, :id, null, :mutedays, :prevIdentity, :operator)";
+        try {
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(":id", $userid);
+            $statement->bindValue(":mutedays", $mutedays);
+            $statement->bindValue(":prevIdentity", $prevIdentity);
+            $statement->bindValue(":operator", $operator);
+            $result = $statement->execute();
+
+            return $result;
+        } catch (\PDOException $e) {
+            echo "add mute record error";
+            echo $e->getMessage();
+        }
+
+    }
+
+    /**
+     * Add user information to database
+     *
+     * @param $user
+     * @param $pass
+     * @param $name
+     * @param $mail
+     * @param $grps
+     * @return bool
+     */
+    public function addUser($user, $pass, $name, $mail, $grps) {
+        try {
+            // create the user in database
+            $sql = "insert into ".$this->settings['usersinfo'].
+                "(id, username, password, realname, mailaddr, identity)
+            values
+            (null, :user, :pass, :name, :mail, :grps)";
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':user', $user);
+            $statement->bindValue(':pass', $pass);
+            $statement->bindValue(':name', $name);
+            $statement->bindValue(':mail', $mail);
+            $statement->bindValue(':grps', $grps);
+
+            $result = $statement->execute();
+            return $result;
+
+        } catch (\PDOException $e) {
+            echo 'addUser';
+            echo $e->getMessage();
+            return false;
+        }
+    }
+
+    /**
+     * Save users' edit log into DB
+     *
+     * @param $pageid   the name of page
+     * @param $summary  editing sum
+     * @param $editor   username
+     * @return bool
+     */
+    public function insertEditlog($pageid, $summary, $editor) {
+        $sql = 'insert into '.$this->settings['editlog'].' (id, pageid, time, summary, editor)
+            values
+                (null, :pageid, null, :summary, :editor)';
+        try {
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':pageid', $pageid);
+            $statement->bindValue(':summary', $summary);
+            $statement->bindValue(':editor', $editor);
+            $result = $statement->execute();
+
+            return $result;
+        }
+        catch (PDOException $e){
+            echo $e->getMessage();
+            return false;
+        }
+    }
+
+    /**
+     * Check the invitation code
+     * Return the boolean result
+     *
+     * @param $invitation
+     * @return bool|mixed
+     */
+    public function checkInvtCode($invitation) {
+        try {
+            $sql = 'select * from '.$this->settings['invitationCode'].' where invitationCode = :code';
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':code', $invitation);
+            $statement->execute();
+            $result = $statement->fetch(PDO::FETCH_ASSOC);
+
+            return $result;
+        } catch (\PDOException $e) {
+            echo $invitation;
+            echo $e->getMessage();
+            return false;
+        }
+    }
+
+    /**
+     * Get user info from username
+     *
+     * @param $user
+     * @return bool
+     */
+    public function getUserData($user) {
+        $sql = 'select * from '.$this->settings['usersinfo'].' where username = :username';
+        $statement = $this->pdo->prepare($sql);
+        $statement->bindValue(':username', $user);
+        $statement->execute();
+
+        $result = $statement->fetch(PDO::FETCH_ASSOC);
+
+        if ($result == false) {
+            return false;
+        }
+
+        $userinfo = $this->transferResult($result);
+
+        return $userinfo;
+    }
+
+    /**
+     * Get user info from email address
+     * @param $email
+     * @return bool
+     */
+    public function getUserDataByEmail($email) {
+        $sql = 'select * from '.$this->settings['usersinfo'].' where mailaddr = :email';
+        $statement = $this->pdo->prepare($sql);
+        $statement->bindValue(':email', $email);
+        $statement->execute();
+
+        $result = $statement->fetch(PDO::FETCH_ASSOC);
+
+        if ($result == false) {
+            return false;
+        }
+
+        $name = $result['username'];
+        $userinfo = $this->transferResult($result);
+        $userinfo['user'] = $name;
+
+        return $userinfo;
     }
 
     /**
@@ -66,30 +227,21 @@ class paperclipDAO
     }
 
     /**
-     * Save users' edit log into DB
-     *
-     * @param $pageid   the name of page
-     * @param $summary  editing sum
-     * @param $editor   username
-     * @return bool
+     * Get user based on conditions
+     * @param $conditions
+     * @return bool|\PDOStatement
      */
-    public function insertEditlog($pageid, $summary, $editor) {
-        $sql = 'insert into '.$this->settings['editlog'].' (id, pageid, time, summary, editor)
-            values
-                (null, :pageid, null, :summary, :editor)';
-        try {
-            $statement = $this->pdo->prepare($sql);
-            $statement->bindValue(':pageid', $pageid);
-            $statement->bindValue(':summary', $summary);
-            $statement->bindValue(':editor', $editor);
-            $result = $statement->execute();
+    public function getUsers($conditions) {
+        if (count($conditions) > 0) {
+            $condArr = implode(' OR ', $conditions);
+            $sql = 'select * from '. $this->settings['usersinfo'] . " where ". $condArr;
+        } else {
+            $sql = 'select * from '. $this->settings['usersinfo'];
+        }
+        $statement = $this->pdo->prepare($sql);
+        $statement->execute();
 
-            return $result;
-        }
-        catch (PDOException $e){
-            echo $e->getMessage();
-            return false;
-        }
+        return $statement;
     }
 
     /**
@@ -125,10 +277,30 @@ class paperclipDAO
             $result = $this->pdo->query($sql);
         } catch (PDOException $e) {
             echo $e->getMessage();
-            return 1;
+            return 0;
         }
 
-        if ($result === false) return 1;
+        if ($result === false) return 0;
+        $num = $result->fetchColumn();
+
+        return $num;
+    }
+
+    /**
+     * Cut from paperclipAuth.php, maybe duplicate from above
+     *
+     * @param $conditions String
+     * @return int|mixed
+     */
+    public function countUsers($conditions) {
+        if (count($conditions) > 0) {
+            $condArr = implode(' OR ', $conditions);
+            $sql = 'select count(*) from '. $this->settings['usersinfo'] . " where ". $condArr;
+        } else {
+            $sql = 'select count(*) from '. $this->settings['usersinfo'];
+        }
+        $result = $this->pdo->query($sql);
+        if ($result === false) return 0;
         $num = $result->fetchColumn();
 
         return $num;
@@ -144,10 +316,6 @@ class paperclipDAO
      */
     public function getEditlogWithUserInfo($offset, $countPage, $conditions='') {
         try {
-//            $sql = "select @editor=:editor;";
-//            $statement = $this->pdo->prepare($sql);
-//            $statement->bindValue(':editor', $username);
-//            $statement->execute();
             $editlog = $this->settings['editlog'];
             $users = $this->settings['usersinfo'];
 
@@ -236,6 +404,24 @@ class paperclipDAO
         }
     }
 
+    /**
+     * @param $userID
+     * @return bool|\PDOStatement
+     */
+    public function getMuteRecord($userID) {
+        try {
+            $sql = "select * from {$this->settings['mutelog']} where id=:userID";
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue("userID", $userID);
+            $statement->execute();
+
+            return $statement;
+        } catch (\PDOException $e) {
+            echo 'getMutedRecord';
+            echo $e->getMessage();
+        }
+
+    }
 
     /**
      * Set user identity to new Identity
@@ -259,33 +445,83 @@ class paperclipDAO
     }
 
     /**
-     * Add record of mute execution
-     *
-     * @param $userid
-     * @param $mutedays
-     * @param $prevIdentity
-     * @param $operator
+     * Update invitation code table
+     * @param $invitation
      * @return bool
      */
-    public function addMuteRecord($userid, $mutedays, $prevIdentity, $operator) {
-        $sql = "insert into {$this->settings['mutelog']} 
-                  (recordid, id, time, mutedates, identity, operator) 
-                values 
-                  (null, :id, null, :mutedays, :prevIdentity, :operator)";
+    public function setInvtCodeToInvalid($invitation) {
         try {
+            // set the invitation code to invalid
+            $sql = "update code set isUsed = 1 where invitationCode = :code";
             $statement = $this->pdo->prepare($sql);
-            $statement->bindValue(":id", $userid);
-            $statement->bindValue(":mutedays", $mutedays);
-            $statement->bindValue(":prevIdentity", $prevIdentity);
-            $statement->bindValue(":operator", $operator);
+            $statement->bindValue(':code', $invitation);
             $result = $statement->execute();
-
-            return $result;
+//            return $result;
         } catch (\PDOException $e) {
-            echo "add mute record error";
+            echo 'setInvitationCode';
             echo $e->getMessage();
         }
 
     }
+
+    /**
+     * @param $user
+     * @param $pass
+     * @return bool
+     */
+    public function setUserInfo($user, $pass) {
+        try {
+            $sql = "update ".$this->settings['usersinfo'] ." set password = :pass where username = :user";
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':pass', $pass);
+            $statement->bindValue(':user', $user);
+            $result = $statement->execute();
+
+            return $result;
+        } catch (\PDOException $e) {
+            echo 'setUserInfo';
+            echo $e->getMessage();
+            return false;
+        }
+
+    }
+
+    /**
+     * Delete User
+     *
+     * @param $user Username
+     * @return bool
+     */
+    public function deleteUser($user) {
+        try {
+            $sql = "delete from " . $this->settings['usersinfo'] . " where username = :username";
+            $statement = $this->pdo-prepare($sql);
+            $statement->bindValue(':username', $user);
+            $result = $statement->execute();
+
+            return $result;
+        } catch (\PDOException $e) {
+            echo 'deleteUser';
+            echo $e->getMessage();
+            return false;
+        }
+    }
+
+    /**
+     * Simple transfer of array
+     *
+     * @param $result
+     * @return array
+     */
+    private  function  transferResult ($result) {
+        return [
+            'pass' => $result['password'],
+            'name' => $result['realname'],
+            'mail' => $result['mailaddr'],
+            'id'   => $result['id'],
+            'grps' => array_filter(explode(',', $result['identity']))
+        ];
+    }
+
 
 }
