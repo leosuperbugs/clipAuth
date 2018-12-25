@@ -11,6 +11,10 @@ if (!defined('DOKU_INC')) {
     die();
 }
 
+define("__SEC__DAY__", 86400);
+define("__MUTED__", 'muted');
+define("__NUKED__", 'nuked');
+
 class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
 {
 
@@ -38,21 +42,6 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
         $this->cando['getGroups']   = true; // can a list of available groups be retrieved?
 //        $this->cando['external']    = true; // does the module do external auth checking?
         $this->cando['logout']      = true; // can the user logout again? (eg. not possible with HTTP auth)
-//        // connect to the MySQL
-//        require dirname(__FILE__).'/../settings.php';
-//        $dsn = "mysql:host=".$this->settings['host'].
-//            ";dbname=".$this->settings['dbname'].
-//            ";port=".$this->settings['port'].
-//            ";charset=".$this->settings['charset'];
-//
-//        try {
-//            $this->pdo = new PDO($dsn, $this->settings['username'], $this->settings['password']);
-//        } catch ( PDOException $e) {
-//            echo "Dateebase connection error\n";
-//            echo $e->getMessage();
-//            $this->success = false;
-//            exit;
-//        }
 
         $this->dao = new dokuwiki\paperclip\paperclipDAO();
 
@@ -99,6 +88,40 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
         */
     //}
 
+    private function isInPrison($record) {
+        $time = $record['time'];
+        $sentence = $record['mutedates'];
+        $mutedTimeInSeconds = strtotime($time);
+        $timeNow = strtotime('now');
+        $timeElapsed = $timeNow - $mutedTimeInSeconds;
+
+        if ($timeElapsed > __SEC__DAY__ * $sentence) {
+            // Not in prison
+            return false;
+        } else {
+            // Still in prison
+            return true;
+        }
+
+    }
+
+    private function checkUserStatus($userinfo, &$userPrevId) {
+        // get the mute record for every user
+        $statement = $this->dao->getMuteRecord($userinfo['id']);
+        if ($statement->rowCount() === 0) {
+            return true;
+        } else {
+            while (($result = $statement->fetch(PDO::FETCH_ASSOC)) !== false) {
+                if ($this->isInPrison($result)) {
+                    // Should not be released
+                    return false;
+                }
+                $userPrevId = $result['identity'];
+            }
+            return true;
+        }
+    }
+
     /**
      * Check user+password
      *
@@ -123,8 +146,23 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
                 $userinfo = $this->getUserData($user);
 
             }
+
             // begin to verify
-            // block nuked users and save the muted users
+            if (in_array(__NUKED__, $userinfo['grps'])) {
+                // block nuked users and save the muted users
+                return false;
+            }
+            elseif (in_array(__MUTED__, $userinfo['grps'])) {
+                // Only for muted users
+                $prevID = 'user';
+                if ($this->checkUserStatus($userinfo, $prevID)) {
+                    // change user status;
+                    $this->dao->setUserIdentity($userinfo['id'], $prevID);
+                    $userinfo = $this->getUserData($user);
+                }
+
+
+            }
 
             if ($userinfo !== false) {
                 return auth_verifyPassword($pass, $userinfo['pass']);
