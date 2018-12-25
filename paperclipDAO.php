@@ -359,7 +359,7 @@ class paperclipDAO
      * @return bool|null|\PDOStatement
      */
     public function getEditlog($username, $offset, $countPage) {
-        $sql = "select @editor=:editor;";
+        $sql = "set @editor=:editor;";
         $statement = $this->pdo->prepare($sql);
         $statement->bindValue(':editor', $username);
         $statement->execute();
