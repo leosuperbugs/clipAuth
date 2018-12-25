@@ -471,7 +471,7 @@ class paperclipDAO
      */
     public function setUserInfo($user, $pass) {
         try {
-            $sql = "update ".$this->settings['usersinfo'] ." set password = :pass where username = :user";
+            $sql = "update ".$this->settings['usersinfo'] ." set password=:pass where username=:user";
             $statement = $this->pdo->prepare($sql);
             $statement->bindValue(':pass', $pass);
             $statement->bindValue(':user', $user);
@@ -484,6 +484,22 @@ class paperclipDAO
             return false;
         }
 
+    }
+
+    public function setUserIdentity($id, $newIdentity) {
+        try {
+            $sql = "update ".$this->settings['usersinfo'] ." set identity=:identity where id=:id";
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':identity', $newIdentity);
+            $statement->bindValue(':id', $id, PDO::PARAM_INT);
+            $result = $statement->execute();
+
+            return $result;
+        } catch (\PDOException $e) {
+            echo 'setUserInfo';
+            echo $e->getMessage();
+            return false;
+        }
     }
 
     /**

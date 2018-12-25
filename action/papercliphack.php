@@ -46,7 +46,8 @@ define('__REGISTER_ORDER__', array(
     'passchk' => 15,
     'fullname' => 18
 ));
-
+define('__MUTED__', 'muted');
+define('__NUKED__', 'nuked');
 
 class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 {
@@ -145,7 +146,11 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             if(!$INFO['isadmin']) return;
 
             // Change user identity
-            $this->dao->setIdentity($_POST['userID'], 'muted');
+            if ($_POST['muteTime'] == '0') {
+                $this->dao->setIdentity($_POST['userID'], __NUKED__);
+            } else {
+                $this->dao->setIdentity($_POST['userID'], __MUTED__);
+            }
 
             // Make mute record
             $this->dao->addMuteRecord($_POST['userID'], $_POST['muteTime'], $_POST['identity'], implode(',',$USERINFO['grps']));
