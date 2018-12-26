@@ -121,12 +121,12 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             array(),
             -PHP_INT_MAX
         );
-//        $controller->register_hook(
-//            'TPL_CONTENT_DISPLAY',
-//            'BEFORE',
-//            $this,
-//            'clearWayForShow'
-//        );
+        $controller->register_hook(
+            'TPL_CONTENT_DISPLAY',
+            'BEFORE',
+            $this,
+            'clearWayForShow'
+        );
         $controller->register_hook(
             'AJAX_CALL_UNKNOWN',
             'BEFORE',
