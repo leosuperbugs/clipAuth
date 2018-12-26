@@ -307,7 +307,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         </div>
     </div> 
     <p class='paperclip__editlog__sum'>
-        编辑摘要： $summary
+        详情： $summary
     </p>
     <div class='paperclip__editlog__footer'>
         <a class='paperclip__editlog__link' href='/doku.php?id=$pageid&do=edit' target='_blank'>继续编辑</a>
@@ -908,7 +908,6 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 
     }
 
-    // Not finished
     private function adminEditUnit($editData) {
         $id = $editData['id'];
         $time = $editData['time'];
@@ -923,6 +922,19 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         print "</div>";
 
     }
+
+    private function adminCommentUnit($commentData) {
+
+        print "<div class='paperclip__adminEditUnit'>";
+        print "<hr class='paperclip__editlog__split'>";
+        $this->printAdminProcess($commentData['hash'], $commentData['time'], $commentData['userid'], $commentData['identity']);
+        $this->printUserInfo($commentData['realname'], $commentData['userid'], $commentData['mailaddr'], $commentData['identity']);
+        $this->editUnit($commentData, true);
+
+
+        print "</div>";
+    }
+
 
 
 
@@ -958,7 +970,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         else {
             echo "<div class='paperclip__admin'>";
 
-            if ($show === 'alledit' || $ACT){
+            if ($show === 'alledit'){
                 // Showing the edit history for admins
                 // For admins only, show full edit history
                 $this->printAdminHeader(__CLIP__ALLEDIT__);
@@ -984,7 +996,31 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
                 $sum = ceil($countFullEditlog / $this->editperpage);
                 $this->paginationNumber($sum, $pagenum, 'alledit');
 
-            } else if ($show === 'addcom') {
+            } else if ($show === 'allcom') {
+                // Showing the comment history for admins
+                $this->printAdminHeader(__CLIP__ALLCOM__);
+
+                // Get comment count and do the calculation
+                $countFullEditlog = $this->dao->countRow('', 'comment');
+                $pagenum = $this->checkPagenum($pagenum, $countFullEditlog, '');
+                $offset = ($pagenum - 1) * $this->editperpage;
+                $countPage = $this->editperpage;
+                $countPage = $this->roundLimit($countPage, $countFullEditlog, $offset);
+
+                $statement = $this->dao->getCommentWithUserInfo($offset, $countPage);
+
+
+                while (($result = $statement->fetch(PDO::FETCH_ASSOC)) !== false) {
+                    // Processing the result of editlog, generating a row of log
+                    $this->adminCommentUnit($result);
+                }
+
+                if ($statement->rowCount() === 0) {
+                    echo '<br>还没有编辑记录<br>';
+                }
+
+                $sum = ceil($countFullEditlog / $this->editperpage);
+                $this->paginationNumber($sum, $pagenum, 'allcom');
 
             }
 

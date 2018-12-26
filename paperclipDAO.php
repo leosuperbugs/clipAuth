@@ -319,8 +319,6 @@ class paperclipDAO
             $editlog = $this->settings['editlog'];
             $users = $this->settings['usersinfo'];
 
-
-
             $sql = "select 
                     $editlog.id as editlogid,
                     $editlog.pageid,
@@ -343,13 +341,48 @@ class paperclipDAO
             $statement->bindValue(":offset", $offset, PDO::PARAM_INT);
             $statement->bindValue(":count", $countPage, PDO::PARAM_INT);
             $statement->execute();
+            return $statement;
+
         } catch (PDOException $e) {
             echo $e->getMessage();
             return false;
         }
-        return $statement;
     }
 
+    public function getCommentWithUserInfo($offset, $countPage, $conditions="") {
+        try {
+            $comment = $this->settings['comment'];
+            $users = $this->settings['usersinfo'];
+
+            $sql = "select 
+                    $comment.hash, 
+                    $comment.comment as summary,
+                    $comment.time,
+                    $comment.username as editor,
+                    $comment.pageid,
+                    $users.realname,
+                    $users.id as userid,
+                    $users.mailaddr,
+                    $users.identity
+                    from $comment inner join $users on $comment.username = $users.realname";
+
+            if ($conditions) {
+                $sql .= " where $conditions";
+            }
+            $sql .= " order by $comment.time DESC limit :offset ,:count";
+
+            $statement = $this->pdo->prepare($sql);
+            // Be careful about the data_type next time!
+            $statement->bindValue(":offset", $offset, PDO::PARAM_INT);
+            $statement->bindValue(":count", $countPage, PDO::PARAM_INT);
+            $statement->execute();
+            return $statement;
+
+        } catch (PDOException $e) {
+            echo $e->getMessage();
+            return false;
+        }
+    }
     /**
      * Get the editlog for the users by page
      *
