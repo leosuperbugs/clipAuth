@@ -35,7 +35,7 @@ define('__CLIP__ALLEDIT__', 5);
 define('__CLIP__ALLCOM__', 6);
 define('__CLIP__ADMIN__', 7);
 
-define('__NAVBARSETTING__', array('最近编辑', '评论/回复', '设置', '条目名称搜索', '条目内容搜索', '词条更新日志', '用户活动日志', '管理'));
+define('__NAVBARSETTING__', array('最近编辑', '评论/回复', '设置', '条目名称搜索', '条目内容搜索', '词条更新日志', '用户评论日志', '管理'));
 define('__HREFSETTING__', array('editlog', 'comment', 'setting', 'title', 'fulltext', 'alledit', 'allcom', 'admin'));
 // The position of the metadata in the register form
 define('__REGISTER_ORDER__', array(
@@ -121,12 +121,12 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             array(),
             -PHP_INT_MAX
         );
-        $controller->register_hook(
-            'TPL_CONTENT_DISPLAY',
-            'BEFORE',
-            $this,
-            'clearWayForShow'
-        );
+//        $controller->register_hook(
+//            'TPL_CONTENT_DISPLAY',
+//            'BEFORE',
+//            $this,
+//            'clearWayForShow'
+//        );
         $controller->register_hook(
             'AJAX_CALL_UNKNOWN',
             'BEFORE',
@@ -853,7 +853,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         echo '</div>';
 
 
-        if ($show === 'title' || $ACT === 'search') {
+        if ($show === 'title') {
             // Display the result of title searching
             $pageLookupResults = ft_pageLookup($QUERY, true, useHeading('navigation'), $after, $before);
             $this->showSearchOfPageTitle($pageLookupResults, array());
@@ -1047,7 +1047,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         $username = $USERINFO['name'];
         $pagenum = $_GET['page'];
 
-        if ($ACT === 'profile' || $show === 'editlog') {
+        if ($show === 'editlog') {
             $event->data = '';
             // A little bit wired here, need fix
             $editRecordCount = $this->countEditForName($username);
@@ -1078,7 +1078,8 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             print "<div class='paperclip__selfinfo'>";
             $this->setting();
             print "</div>";
-        } else if ($QUERY) {
+        }
+        else if ($QUERY) {
             $this->showSearchResult();
         }
         else if ($this->isAdmin($show, $ACT)) {
