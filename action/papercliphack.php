@@ -853,7 +853,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         echo '</div>';
 
 
-        if ($show === 'title') {
+        if ($show === 'title' || !isset($show)) {
             // Display the result of title searching
             $pageLookupResults = ft_pageLookup($QUERY, true, useHeading('navigation'), $after, $before);
             $this->showSearchOfPageTitle($pageLookupResults, array());
