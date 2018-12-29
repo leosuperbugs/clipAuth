@@ -221,6 +221,17 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
     {
         global $conf;
 
+        // validate email again to avoid client bypassing input tag validation check
+        if (filter_var($mail, FILTER_VALIDATE_EMAIL) === false) {
+            echo 'Invalid Email';
+            return false;
+        }
+
+        // check if the email has been registerd
+        if ($this->getUserDataByEmail($mail) !== false) {
+            return false;
+        }
+
         // check if the user already exist
         if ($this->getUserData($user) !== false) {
             return false;
@@ -238,22 +249,70 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
             }
             $pass = $pass['pass'];
         }
+
+        // encrypt password
         $pass = auth_cryptPassword($pass);
+
+        // generate verfication code with random 48 bytes and convert them to hex
+        // the actual length would be 48 * 2 = 96
+        $verficationCode = bin2hex(openssl_random_pseudo_bytes(48));
+
         // set default group if no groups specified
         if(!is_array($grps)) $grps = array($conf['defaultgroup']);
         $grps = join(',', $grps);
 
-        $result = $this->dao->addUser($user, $pass, $name, $mail, $grps);
+        $result = $this->dao->addUser($user, $pass, $name, $mail, $grps, $verficationCode);
 
         if ($result === true) {
             if ($conf['needInvitation'] == 0) {
                 $this->dao->setInvtCodeToInvalid($invitation);
             }
-            return true;
+            return ($this->sendVerificationMail($mail, $verficationCode));
         }
         else {
             return null;
         }
+    }
+
+    /**
+    * Send a verfication e-mail
+    *
+    * Returns true if the mail was successfully accepted for delivery,
+    * false otherwise
+    *
+    * @param   string   $mail  e-mail address this mail sends to
+    * @param   string   $verficationCode verificationcode to be sent
+    *
+    * @return  bool
+     */
+    private function sendVerificationMail($mail, $verficationCode)
+    {
+      $to = $mail;
+      $subject = '回形针验证[paperclip verfication]';
+      $message = "
+      <html><head><title>回形针验证[paperclip verfication]</title></head>
+      <body>
+        <p>请点击链接验证[Please use the following link to be verified]:
+          https://ipaperclip.net/dokuwiki.php?id=\"$verficationCode\"&do=verify
+        </p>
+      </body>
+      </html>
+      ";
+      $header = array(
+        'From' => 'noreply@paperclip.com',
+        'Reply-To' => 'noreply@paperclip.com',
+        'MIME-Version' => '1.0',
+        'Content-type' => 'text/html;charset=UTF-8'
+      );
+
+      try {
+        return mail($to, $subject, $message, $header);
+      } catch(Exception $e) {
+        echo '<script>console.log("HOLLY FUNK")</script>';
+        echo 'sendVerificationMail';
+        echo $e->getMessage();
+        return false;
+      }
     }
 
     /**
@@ -522,4 +581,3 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
       // FIXME implement
     //}
 }
-

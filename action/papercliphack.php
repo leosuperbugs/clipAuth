@@ -95,7 +95,6 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
      */
     public function register(Doku_Event_Handler $controller)
     {
-
         $controller->register_hook(
             'COMMON_WIKIPAGE_SAVE',
             'AFTER', $this,
@@ -300,12 +299,12 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     <hr class='paperclip__editlog__split $needHide'>
     <div class='paperclip__editlog__header'>
         <div class='paperclip__editlog__pageid'>
-           $mainPageName 
+           $mainPageName
         </div>
         <div class='paperclip__editlog__time'>
             最后的编辑时间为 $time .
         </div>
-    </div> 
+    </div>
     <p class='paperclip__editlog__sum'>
         详情： $summary
     </p>
@@ -316,7 +315,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             索引：<span class='paperclip__link'>$indexForShow</span>
         </div>
     </div>
-</div> 
+</div>
         ";
     }
 
@@ -342,7 +341,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             \"$replier\"的回复
         </div>
         <div class='paperclip__editlog__time'>
-            $time 
+            $time
         </div>
     </div>
     <p class='paperclip__editlog__sum'>
@@ -355,7 +354,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             索引：<span class='paperclip__link'>$indexForShow</span>
         </div>
     </div>
-</div> 
+</div>
         ";
     }
 
@@ -888,9 +887,9 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
                         <input type='hidden' name='userID' value='$userID'>
                         <input type='hidden' name='call' value='paperclip'>
                         <input type='hidden' name='identity' value='$identity'>
-                        
+
                         <input type='submit' value='{$this->getLang('process')}'>
-                    
+
                     </form>
         </div>";
     }
@@ -1101,4 +1100,3 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     }
 
 }
-
