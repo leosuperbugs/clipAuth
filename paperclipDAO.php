@@ -329,7 +329,7 @@ class paperclipDAO
                     $users.id as editorid,
                     $users.mailaddr,
                     $users.identity
-            from $editlog inner join $users on $editlog.editor = $users.realname";
+            from $editlog inner join $users on $editlog.editor = $users.username";
 
             if ($conditions) {
                 $sql .= " where $conditions";
@@ -364,7 +364,7 @@ class paperclipDAO
                     $users.id as userid,
                     $users.mailaddr,
                     $users.identity
-                    from $comment inner join $users on $comment.username = $users.realname";
+                    from $comment inner join $users on $comment.username = $users.username";
 
             if ($conditions) {
                 $sql .= " where $conditions";
@@ -502,7 +502,7 @@ class paperclipDAO
      * @param $pass
      * @return bool
      */
-    public function setUserInfo($user, $pass) {
+    public function setUserInfoO($user, $pass) {
         try {
             $sql = "update ".$this->settings['usersinfo'] ." set password=:pass where username=:user";
             $statement = $this->pdo->prepare($sql);
@@ -517,6 +517,60 @@ class paperclipDAO
             return false;
         }
 
+    }
+
+    private function checkFirstAppendComma(&$sql, &$notFirst) {
+        if ($notFirst) {
+            $sql .= ' , ';
+        } else {
+            $notFirst = true;
+        }
+    }
+
+    public function setUserInfo($user, $changes) {
+        $sql = "update ".$this->settings['usersinfo']." set ";
+        $notFirst = false;
+
+        // Process the updated content
+        if ($changes['pass']) {
+            $this->checkFirstAppendComma($sql, $notFirst);
+            $sql .= " password=:pass ";
+        }
+        if ($changes['mail']) {
+            $this->checkFirstAppendComma($sql, $notFirst);
+            $sql .= " mailaddr=:mail ";
+        }
+        if ($changes['name']) {
+            $this->checkFirstAppendComma($sql, $notFirst);
+            $sql .= " realname=:name ";
+        }
+        // Can be appended here in the future
+
+        $sql .= " where username=:user";
+
+        try {
+            $statement = $this->pdo->prepare($sql);
+            // Bind values here
+            if ($changes['pass']) {
+                $pass = auth_cryptPassword($changes['pass']);
+                $statement->bindValue(':pass', $pass);
+            }
+            if ($changes['mail']) {
+                $statement->bindValue(':mail', $changes['mail']);
+            }
+            if ($changes['name']) {
+                $statement->bindValue(':name', $changes['name']);
+            }
+            $statement->bindValue(':user', $user);
+
+            $result = $statement->execute();
+            return $result;
+
+        } catch (\PDOException $e) {
+            echo 'setUserInfo';
+            echo $e->getMessage();
+            return false;
+        }
     }
 
     public function setUserIdentity($id, $newIdentity) {

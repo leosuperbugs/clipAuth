@@ -247,7 +247,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 
         $pageid = $event->data['id'];
         $summary = $event->data['summary'];
-        $editor = $INFO['userinfo']['name'];
+        $editor = $INFO['client'];
         $htmlDiff = new HtmlDiff($event->data['oldContent'], $event->data['newContent']);
         $content = $htmlDiff->build();
         $content = '<?xml version="1.0" encoding="UTF-8"?><div>'.$content.'</div>';
@@ -874,11 +874,13 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
      * @param $userID
      */
     private function printAdminProcess($id, $time, $userID, $identity) {
+        global $INFO;
 
         print "<div class='paperclip__adminProcess' >
                     <span>{$this->getLang('id')}$id</span>
-                    <span>{$this->getLang('time')}$time</span>
-                    <form  id='$id'>
+                    <span>{$this->getLang('time')}$time</span>";
+        if(!$INFO['isadmin']) {
+            print "<form  id='$id'>
                         <select name='muteTime'>
                             <option value='1'>禁言1天</option>
                             <option value='7'>禁言7天</option>
@@ -890,9 +892,12 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
                         <input type='hidden' name='identity' value='$identity'>
                         
                         <input type='submit' value='{$this->getLang('process')}'>
-                    
-                    </form>
-        </div>";
+                    </form>";
+        } else {
+            print $this->getLang('cantban');
+        }
+
+        print "</div>";
     }
 
     private function printUserInfo($realname, $editorid, $mailaddr, $identity) {
