@@ -960,6 +960,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 
     /**
      * A wrapper of checking if the action is to admin the site
+     * !!! NOT FOR IDENTITY!!
      *
      * @param $show
      * @param $ACT
