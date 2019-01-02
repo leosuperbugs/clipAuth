@@ -33,7 +33,7 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
         $this->cando['addUser']     = true; // can users be added?
         $this->cando['delUser']     = true; // can Users be deleted?
         $this->cando['modLogin']    = true; // can login names be changed?
-        $this->cando['modPass']     = true; // can passwords be changed?
+        $this->cando['modPass']     = false; // can passwords be changed?
         $this->cando['modName']     = true; // can real names be changed?
         $this->cando['modMail']     = true; // can emails be changed?
         $this->cando['modGroups']   = true; // can groups be changed?
@@ -328,12 +328,8 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
     public function modifyUser($user, $changes)
     {
         if ($this->getUserData($user) !== false) {
-            if (isset($changes['pass'])) {
-                $pass = auth_cryptPassword($changes['pass']);
-                $result = $this->dao->setUserInfo($user, $pass);
-                return $result;
-
-            }
+            $result = $this->dao->setUserInfo($user, $changes);
+            return $result;
         }
 
         return false;

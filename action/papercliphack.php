@@ -246,7 +246,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 
         $pageid = $event->data['id'];
         $summary = $event->data['summary'];
-        $editor = $INFO['userinfo']['name'];
+        $editor = $INFO['client'];
         $htmlDiff = new HtmlDiff($event->data['oldContent'], $event->data['newContent']);
         $content = $htmlDiff->build();
         $content = '<?xml version="1.0" encoding="UTF-8"?><div>'.$content.'</div>';
@@ -487,8 +487,8 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         // Out put the header part
         $this->printSelfinfoHeader(__CLIP__EDIT__);
         //
-        global $USERINFO, $conf;
-        $username = $USERINFO['name'];
+        global $USERINFO, $conf, $INFO;
+        $username = $INFO['client'];
         $count = $this->countEditForName($username);
         $pagenum = $this->checkPagenum($pagenum, $count, $username);
         $offset = ($pagenum - 1) * $this->editperpage;
@@ -513,8 +513,8 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         $this->printSelfinfoHeader(__CLIP__COMMENT__);
 
         // Print the content of replying comment
-        global $USERINFO, $conf;
-        $username = $USERINFO['name'];
+        global $USERINFO, $conf, $INFO;
+        $username = $INFO['client'];
         $count = $this->countReplyForName($username);
         $pagenum = $this->checkPagenum($pagenum, $count, $username);
         $offset = ($pagenum - 1) * $this->replyperpage;
@@ -601,7 +601,6 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     private function paginationNumber($sum, $page, $content, $additionalParam = []) {
         // check some exception
         global $USERINFO, $conf;
-        $username = $USERINFO['name'];
         if ($sum <= 0 || $page <= 0 || $sum < $page) {
             echo '';
         }
@@ -867,17 +866,37 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     }
 
     /**
+     * Return true if the identity is an admin
+     *
+     * @param $identity
+     * @return bool
+     */
+    private function checkIdentityIsAdmin($identity) {
+        $identities = explode(',', $identity);
+        if (in_array('admin', $identities)) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    /**
      * Print the first line of user
      * @param $id
      * @param $time
      * @param $userID
      */
     private function printAdminProcess($id, $time, $userID, $identity) {
+        global $INFO;
+        $isRecordEditorAdmin = $this->checkIdentityIsAdmin($identity);
 
         print "<div class='paperclip__adminProcess' >
                     <span>{$this->getLang('id')}$id</span>
-                    <span>{$this->getLang('time')}$time</span>
-                    <form  id='$id'>
+                    <span>{$this->getLang('time')}$time</span>";
+        if($isRecordEditorAdmin) {
+            print $this->getLang('cantban');
+        } else {
+            print "<form  id='$id'>
                         <select name='muteTime'>
                             <option value='1'>禁言1天</option>
                             <option value='7'>禁言7天</option>
@@ -939,6 +958,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 
     /**
      * A wrapper of checking if the action is to admin the site
+     * !!! NOT FOR IDENTITY!!
      *
      * @param $show
      * @param $ACT
@@ -1042,8 +1062,8 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         // Dispatch the customized behavior based on _GET
         global $_GET, $ACT;
         $show = $_GET['show'];
-        global $USERINFO, $conf, $QUERY;
-        $username = $USERINFO['name'];
+        global $USERINFO, $conf, $QUERY, $INFO;
+        $username = $INFO['client'];
         $pagenum = $_GET['page'];
 
         if ($show === 'editlog') {
