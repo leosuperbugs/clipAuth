@@ -905,12 +905,13 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
                         </select>
                         <input type='hidden' name='userID' value='$userID'>
                         <input type='hidden' name='call' value='paperclip'>
-                        <input type='hidden' name='identity' value='$identity'>
+                        <input type='hidden' name='identity' value='{$INFO['client']}'>
 
                         <input type='submit' value='{$this->getLang('process')}'>
 
-                    </form>
-        </div>";
+                    </form>";
+                  }
+        print "</div>";
     }
 
     private function printUserInfo($realname, $editorid, $mailaddr, $identity) {

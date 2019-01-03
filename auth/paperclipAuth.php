@@ -199,6 +199,7 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
     }
 
     /**
+     * TODO: Add verficationCode support ==> add mailing server && add additional column in db to store verificationcode
      * Create a new User [implement only where required/possible]
      *
      * Returns false if the user already exists, null when an error
@@ -267,7 +268,10 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
             if ($conf['needInvitation'] == 0) {
                 $this->dao->setInvtCodeToInvalid($invitation);
             }
-            return ($this->sendVerificationMail($mail, $verficationCode));
+            $this->sendVerificationMail($mail, $verficationCode);
+            // TODO: config mailing account if we want to verfication of e-mails
+            // return ($this->sendVerificationMail($mail, $verficationCode));
+            return true;
         }
         else {
             return null;
@@ -275,6 +279,7 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
     }
 
     /**
+    * WARNING: mailing server has not been configured.
     * Send a verfication e-mail
     *
     * Returns true if the mail was successfully accepted for delivery,
@@ -293,7 +298,7 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
       <html><head><title>回形针验证[paperclip verfication]</title></head>
       <body>
         <p>请点击链接验证[Please use the following link to be verified]:
-          https://ipaperclip.net/dokuwiki.php?id=\"$verficationCode\"&do=verify
+          https://ipaperclip.net/dokuwiki.php?id=\"$verficationCode \".\"$mail\"&do=verify
         </p>
       </body>
       </html>
