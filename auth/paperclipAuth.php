@@ -228,6 +228,10 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
             return false;
         }
 
+        $verficationCode = bin2hex(openssl_random_pseudo_bytes(48));
+
+        return $this->sendVerificationMail($mail, $verficationCode);
+
         // check if the email has been registerd
         if ($this->getUserDataByEmail($mail) !== false) {
             return false;
@@ -268,10 +272,8 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
             if ($conf['needInvitation'] == 0) {
                 $this->dao->setInvtCodeToInvalid($invitation);
             }
-            $this->sendVerificationMail($mail, $verficationCode);
-            // TODO: config mailing account if we want to verfication of e-mails
-            // return ($this->sendVerificationMail($mail, $verficationCode));
-            return true;
+
+            return $this->sendVerificationMail($mail, $verficationCode);
         }
         else {
             return null;
@@ -292,31 +294,21 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
      */
     private function sendVerificationMail($mail, $verficationCode)
     {
-      $to = $mail;
-      $subject = '回形针验证[paperclip verfication]';
-      $message = "
-      <html><head><title>回形针验证[paperclip verfication]</title></head>
-      <body>
-        <p>请点击链接验证[Please use the following link to be verified]:
-          https://ipaperclip.net/dokuwiki.php?id=\"$verficationCode \".\"$mail\"&do=verify
-        </p>
-      </body>
-      </html>
-      ";
-      $header = array(
-        'From' => 'noreply@paperclip.com',
-        'Reply-To' => 'noreply@paperclip.com',
-        'MIME-Version' => '1.0',
-        'Content-type' => 'text/html;charset=UTF-8'
+      $smtp = $this->loadHelper('smtp');
+
+      $link = "https://ipaperclip.net/dokuwiki.php?id=" . $verficationCode . "_". $mail;
+      $type = 'verification';
+
+      $info = array(
+        'to'=>$mail,
+        'link'=>$link
       );
 
       try {
-        return mail($to, $subject, $message, $header);
+        return $smtp->sendMail($info, $type);
       } catch(Exception $e) {
-        echo '<script>console.log("HOLLY FUNK")</script>';
-        echo 'sendVerificationMail';
-        echo $e->getMessage();
-        return false;
+          echo $e->getMessage();
+          return false;
       }
     }
 

@@ -16,5 +16,3 @@ $conf['passMaxLen'] = 40;
 $conf['fullnameMaxLen'] = 16;
 $conf['editors'] = '编辑成员';
 $conf['resultperpage'] = 10;
-// override default mailfrom
-$conf['mailfrom'] = getenv('MAIL_FROM');
