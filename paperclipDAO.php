@@ -86,7 +86,7 @@ class paperclipDAO
             $statement->bindValue(':name', $name);
             $statement->bindValue(':mail', $mail);
             $statement->bindValue(':grps', $grps);
-            //TODO: add verficationCode column
+            // $statement->bindValue(':vc', $verficationCode);
 
             $result = $statement->execute();
             return $result;
@@ -591,6 +591,23 @@ class paperclipDAO
         }
     }
 
+    public function setUserGroup($id, $newGroup) {
+        try {
+            $sql = "update ".$this->settings['usersinfo'] . " set identity=:grps verifycode=null resetpasscode=null where id=:id";
+
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':grps', $newGroup);
+            $statement->bindValue(':id', $id, PDO::PARAM_INT);
+            $result = $statement->execute();
+
+            return $result;
+        } catch (\PDOException $e) {
+            echo 'setUserGroup';
+            echo $e->getMessage();
+            return false;
+        }
+    }
+
     /**
      * Delete User
      *
@@ -624,7 +641,9 @@ class paperclipDAO
             'name' => $result['realname'],
             'mail' => $result['mailaddr'],
             'id'   => $result['id'],
-            'grps' => array_filter(explode(',', $result['identity']))
+            'grps' => array_filter(explode(',', $result['identity'])),
+            'verifycode' => $result['verifycode'],
+            'resetpasscode' => $result['resetpasscode']
         ];
     }
 

@@ -95,6 +95,11 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
      */
     public function register(Doku_Event_Handler $controller)
     {
+      $controller->register_hook(
+          'ACTION_ACT_PREPROCESS',
+          'BEFORE', $this,
+          'handle_action_act_preprocess'
+      );
         $controller->register_hook(
             'COMMON_WIKIPAGE_SAVE',
             'AFTER', $this,
@@ -1118,6 +1123,42 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     public function changeLink(Doku_Event &$event, $param)
     {
         if($event->data['view'] != 'user') return;
+    }
+    public function handle_action_act_preprocess(Doku_Event $event, $param)
+    {
+      global $_GET;
+      $mail = $_GET['id'];
+      $code = $_GET['verify'];
+
+      // verification code
+      if ($code && $mail) {
+
+        // retrive data
+        $result = $this->dao->getUserDataByEmail($mail);
+
+        // invalid input, redirect to home page
+        if ($result == false || ($result['verifycode'] !== $code && $result['resetpasscode'] !== $code)) {
+          msg('Invalid URL');
+
+          header('Location: doku.php?id=start&do=register');
+        } else {
+          // valid input, modify db and redirect to login page
+          msg('Verification Success');
+
+          if ($result['verifycode'] === $code) {
+            // modify grps
+            $result['grps'][] = 'user';
+            $this->dao->setUserGroup($result['id'], $result['grps']);
+
+            //redirect
+            header('Location: doku.php');
+          } else {
+            // WARNING: Not sure if this is the correct function
+            login();
+            header('Location: doku.php?do=profile');
+          }
+        }
+      }
     }
 
 }

@@ -228,10 +228,6 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
             return false;
         }
 
-        $verficationCode = bin2hex(openssl_random_pseudo_bytes(48));
-
-        return $this->sendVerificationMail($mail, $verficationCode);
-
         // check if the email has been registerd
         if ($this->getUserDataByEmail($mail) !== false) {
             return false;
@@ -272,7 +268,6 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
             if ($conf['needInvitation'] == 0) {
                 $this->dao->setInvtCodeToInvalid($invitation);
             }
-
             return $this->sendVerificationMail($mail, $verficationCode);
         }
         else {
@@ -296,7 +291,7 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
     {
       $smtp = $this->loadHelper('smtp');
 
-      $link = "https://ipaperclip.net/dokuwiki.php?id=" . $verficationCode . "_". $mail;
+      $link = "https://ipaperclip.net/dokuwiki.php?id=".$mail."&verify=".$verficationCode;
       $type = 'verification';
 
       $info = array(
@@ -307,8 +302,8 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
       try {
         return $smtp->sendMail($info, $type);
       } catch(Exception $e) {
-          echo $e->getMessage();
-          return false;
+        echo $e->getMessage();
+        return false;
       }
     }
 
