@@ -77,16 +77,16 @@ class paperclipDAO
         try {
             // create the user in database
             $sql = "insert into ".$this->settings['usersinfo'].
-                "(id, username, password, realname, mailaddr, identity)
+                "(id, username, password, realname, mailaddr, identity, verifycode)
             values
-            (null, :user, :pass, :name, :mail, :grps)";
+            (null, :user, :pass, :name, :mail, :grps, :vc)";
             $statement = $this->pdo->prepare($sql);
             $statement->bindValue(':user', $user);
             $statement->bindValue(':pass', $pass);
             $statement->bindValue(':name', $name);
             $statement->bindValue(':mail', $mail);
             $statement->bindValue(':grps', $grps);
-            // $statement->bindValue(':vc', $verficationCode);
+            $statement->bindValue(':vc', $verficationCode);
 
             $result = $statement->execute();
             return $result;
@@ -593,7 +593,7 @@ class paperclipDAO
 
     public function setUserGroup($id, $newGroup) {
         try {
-            $sql = "update ".$this->settings['usersinfo'] . " set identity=:grps verifycode=null resetpasscode=null where id=:id";
+            $sql = "update ".$this->settings['usersinfo'] . " set identity=:grps, verifycode=NULL, resetpasscode=NULL where id=:id";
 
             $statement = $this->pdo->prepare($sql);
             $statement->bindValue(':grps', $newGroup);

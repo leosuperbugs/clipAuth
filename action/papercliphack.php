@@ -1132,15 +1132,19 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 
       // verification code
       if ($code && $mail) {
-
         // retrive data
         $result = $this->dao->getUserDataByEmail($mail);
 
-        // invalid input, redirect to home page
+        // invalid access
         if ($result == false || ($result['verifycode'] !== $code && $result['resetpasscode'] !== $code)) {
-          msg('Invalid URL');
 
-          header('Location: doku.php?id=start&do=register');
+          // user belongs to some group => user has been verified
+          if ($result != false && strlen($result['grps']) > 0) {
+            header('Location: doku.php');
+          } else {
+            header('Location: doku.php?id=start&do=register');
+          }
+
         } else {
           // valid input, modify db and redirect to login page
           msg('Verification Success');
@@ -1148,7 +1152,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
           if ($result['verifycode'] === $code) {
             // modify grps
             $result['grps'][] = 'user';
-            $this->dao->setUserGroup($result['id'], $result['grps']);
+            $this->dao->setUserGroup($result['id'], implode(",", $result['grps']));
 
             //redirect
             header('Location: doku.php');
@@ -1159,6 +1163,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
           }
         }
       }
+
     }
 
 }
