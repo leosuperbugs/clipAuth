@@ -95,11 +95,11 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
      */
     public function register(Doku_Event_Handler $controller)
     {
-      $controller->register_hook(
-          'ACTION_ACT_PREPROCESS',
-          'BEFORE', $this,
-          'handle_action_act_preprocess'
-      );
+        $controller->register_hook(
+            'ACTION_ACT_PREPROCESS',
+            'BEFORE', $this,
+            'handle_action_act_preprocess'
+        );
         $controller->register_hook(
             'COMMON_WIKIPAGE_SAVE',
             'AFTER', $this,
@@ -392,7 +392,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
      * Return legal pagenum, turn the out-range ones to in-range
      */
     private function checkPagenum($pagenum, $count, $username) {
-        global $conf;
+
         if (!isset($pagenum)) return 1;
 
         $maxnum = ceil($count / $this->editperpage);
@@ -1127,42 +1127,43 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     public function handle_action_act_preprocess(Doku_Event $event, $param)
     {
       global $_GET;
-      $mail = $_GET['id'];
+
+      $mail = $_GET['mail'];
       $code = $_GET['verify'];
 
       // verification code
       if ($code && $mail) {
-        // retrive data
+
+        // retrieve data
         $result = $this->dao->getUserDataByEmail($mail);
 
-        // invalid access
-        if ($result == false || ($result['verifycode'] !== $code && $result['resetpasscode'] !== $code)) {
+        if ($result === false) { // invalid $mail
 
-          // user belongs to some group => user has been verified
-          if ($result != false && strlen($result['grps']) > 0) {
-            header('Location: doku.php');
-          } else {
-            header('Location: doku.php?id=start&do=register');
+          header('Location: doku.php?id=start&do=register');
+        } else if ($result['verifycode'] !== $code) { //invalid $verifycode
+
+          header('Location: doku.php');
+        } else { // valid input
+
+          function filter_cb( $var ) {
+            global $conf;
+            return $var !== $conf['defaultgroup'];
           }
 
-        } else {
-          // valid input, modify db and redirect to login page
-          msg('Verification Success');
+          // modify grps
+          $result['grps'][] = 'user';
 
-          if ($result['verifycode'] === $code) {
-            // modify grps
-            $result['grps'][] = 'user';
-            $this->dao->setUserGroup($result['id'], implode(",", $result['grps']));
+          // filter @ALL (default group)
+          $grps =  implode(",", array_filter($result['grps'], "filter_cb"));
 
-            //redirect
-            header('Location: doku.php');
-          } else {
-            // WARNING: Not sure if this is the correct function
-            login();
-            header('Location: doku.php?do=profile');
-          }
+          // modify db
+          $this->dao->setUserGroup($result['id'], $grps);
+
+          //redirect
+          header('Location: doku.php');
         }
       }
+
 
     }
 
