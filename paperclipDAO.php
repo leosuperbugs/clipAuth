@@ -42,9 +42,9 @@ class paperclipDAO
      * @return bool
      */
     public function addMuteRecord($userid, $mutedays, $prevIdentity, $operator) {
-        $sql = "insert into {$this->settings['mutelog']} 
-                  (recordid, id, time, mutedates, identity, operator) 
-                values 
+        $sql = "insert into {$this->settings['mutelog']}
+                  (recordid, id, time, mutedates, identity, operator)
+                values
                   (null, :id, null, :mutedays, :prevIdentity, :operator)";
         try {
             $statement = $this->pdo->prepare($sql);
@@ -70,21 +70,23 @@ class paperclipDAO
      * @param $name
      * @param $mail
      * @param $grps
+     * @param $verficationCode
      * @return bool
      */
-    public function addUser($user, $pass, $name, $mail, $grps) {
+    public function addUser($user, $pass, $name, $mail, $grps, $verficationCode) {
         try {
             // create the user in database
             $sql = "insert into ".$this->settings['usersinfo'].
-                "(id, username, password, realname, mailaddr, identity)
+                "(id, username, password, realname, mailaddr, identity, verifycode)
             values
-            (null, :user, :pass, :name, :mail, :grps)";
+            (null, :user, :pass, :name, :mail, :grps, :vc)";
             $statement = $this->pdo->prepare($sql);
             $statement->bindValue(':user', $user);
             $statement->bindValue(':pass', $pass);
             $statement->bindValue(':name', $name);
             $statement->bindValue(':mail', $mail);
             $statement->bindValue(':grps', $grps);
+            $statement->bindValue(':vc', $verficationCode);
 
             $result = $statement->execute();
             return $result;
@@ -319,7 +321,7 @@ class paperclipDAO
             $editlog = $this->settings['editlog'];
             $users = $this->settings['usersinfo'];
 
-            $sql = "select 
+            $sql = "select
                     $editlog.id as editlogid,
                     $editlog.pageid,
                     $editlog.time,
@@ -354,8 +356,8 @@ class paperclipDAO
             $comment = $this->settings['comment'];
             $users = $this->settings['usersinfo'];
 
-            $sql = "select 
-                    $comment.hash, 
+            $sql = "select
+                    $comment.hash,
                     $comment.comment as summary,
                     $comment.time,
                     $comment.username as editor,
@@ -589,6 +591,23 @@ class paperclipDAO
         }
     }
 
+    public function setUserGroup($id, $newGroup) {
+        try {
+            $sql = "update ".$this->settings['usersinfo'] . " set identity=:grps, verifycode=NULL, resetpasscode=NULL where id=:id";
+
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':grps', $newGroup);
+            $statement->bindValue(':id', $id, PDO::PARAM_INT);
+            $result = $statement->execute();
+
+            return $result;
+        } catch (\PDOException $e) {
+            echo 'setUserGroup';
+            echo $e->getMessage();
+            return false;
+        }
+    }
+
     /**
      * Delete User
      *
@@ -622,7 +641,9 @@ class paperclipDAO
             'name' => $result['realname'],
             'mail' => $result['mailaddr'],
             'id'   => $result['id'],
-            'grps' => array_filter(explode(',', $result['identity']))
+            'grps' => array_filter(explode(',', $result['identity'])),
+            'verifycode' => $result['verifycode'],
+            'resetpasscode' => $result['resetpasscode']
         ];
     }
 
