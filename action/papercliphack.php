@@ -95,7 +95,11 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
      */
     public function register(Doku_Event_Handler $controller)
     {
-
+        $controller->register_hook(
+            'ACTION_ACT_PREPROCESS',
+            'BEFORE', $this,
+            'handle_action_act_preprocess'
+        );
         $controller->register_hook(
             'COMMON_WIKIPAGE_SAVE',
             'AFTER', $this,
@@ -300,12 +304,12 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     <hr class='paperclip__editlog__split $needHide'>
     <div class='paperclip__editlog__header'>
         <div class='paperclip__editlog__pageid'>
-           $mainPageName 
+           $mainPageName
         </div>
         <div class='paperclip__editlog__time'>
             最后的编辑时间为 $time .
         </div>
-    </div> 
+    </div>
     <p class='paperclip__editlog__sum'>
         详情： $summary
     </p>
@@ -316,7 +320,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             索引：<span class='paperclip__link'>$indexForShow</span>
         </div>
     </div>
-</div> 
+</div>
         ";
     }
 
@@ -342,7 +346,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             \"$replier\"的回复
         </div>
         <div class='paperclip__editlog__time'>
-            $time 
+            $time
         </div>
     </div>
     <p class='paperclip__editlog__sum'>
@@ -355,7 +359,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             索引：<span class='paperclip__link'>$indexForShow</span>
         </div>
     </div>
-</div> 
+</div>
         ";
     }
 
@@ -388,7 +392,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
      * Return legal pagenum, turn the out-range ones to in-range
      */
     private function checkPagenum($pagenum, $count, $username) {
-        global $conf;
+
         if (!isset($pagenum)) return 1;
 
         $maxnum = ceil($count / $this->editperpage);
@@ -907,11 +911,11 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
                         <input type='hidden' name='userID' value='$userID'>
                         <input type='hidden' name='call' value='paperclip'>
                         <input type='hidden' name='identity' value='{$INFO['client']}'>
-                        
-                        <input type='submit' value='{$this->getLang('process')}'>
-                    </form>";
-        }
 
+                        <input type='submit' value='{$this->getLang('process')}'>
+
+                    </form>";
+                  }
         print "</div>";
     }
 
@@ -1120,6 +1124,47 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     {
         if($event->data['view'] != 'user') return;
     }
+    public function handle_action_act_preprocess(Doku_Event $event, $param)
+    {
+      global $_GET;
+
+      $mail = $_GET['mail'];
+      $code = $_GET['verify'];
+
+      // verification code
+      if ($code && $mail) {
+
+        // retrieve data
+        $result = $this->dao->getUserDataByEmail($mail);
+
+        if ($result === false) { // invalid $mail
+
+          header('Location: doku.php?id=start&do=register');
+        } else if ($result['verifycode'] !== $code) { //invalid $verifycode
+
+          header('Location: doku.php');
+        } else { // valid input
+
+          function filter_cb( $var ) {
+            global $conf;
+            return $var !== $conf['defaultgroup'];
+          }
+
+          // modify grps
+          $result['grps'][] = 'user';
+
+          // filter @ALL (default group)
+          $grps =  implode(",", array_filter($result['grps'], "filter_cb"));
+
+          // modify db
+          $this->dao->setUserGroup($result['id'], $grps);
+
+          //redirect
+          header('Location: doku.php');
+        }
+      }
+
+
+    }
 
 }
-
