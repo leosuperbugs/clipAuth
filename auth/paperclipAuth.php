@@ -33,7 +33,7 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
         $this->cando['addUser']     = true; // can users be added?
         $this->cando['delUser']     = true; // can Users be deleted?
         $this->cando['modLogin']    = true; // can login names be changed?
-        $this->cando['modPass']     = false; // can passwords be changed?
+        $this->cando['modPass']     = true; // can passwords be changed?
         $this->cando['modName']     = true; // can real names be changed?
         $this->cando['modMail']     = true; // can emails be changed?
         $this->cando['modGroups']   = true; // can groups be changed?
@@ -320,6 +320,18 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
     public function modifyUser($user, $changes)
     {
         if ($this->getUserData($user) !== false) {
+            if ($changes['mail']) {
+                $mail = $changes['mail'];
+                $verficationCode = bin2hex(openssl_random_pseudo_bytes(48));
+                $result = $this->sendVerificationMail($mail, $verficationCode);
+                if ($result) {
+                    $userdata = $this->dao->getUserData($user);
+                    $id = $userdata['id'];
+                    $this->dao->setIdentity($id, 'unverified');
+                }else{
+                    return false;
+                }
+            }
             $result = $this->dao->setUserInfo($user, $changes);
             return $result;
         }
