@@ -320,6 +320,18 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
     public function modifyUser($user, $changes)
     {
         if ($this->getUserData($user) !== false) {
+            if ($changes['mail']) {
+                $mail = $changes['mail'];
+                $verficationCode = bin2hex(openssl_random_pseudo_bytes(48));
+                $result = $this->sendVerificationMail($mail, $verficationCode);
+                if ($result) {
+                    $userdata = $this->dao->getUserData($user);
+                    $id = $userdata['id'];
+                    $this->dao->setIdentity($id, 'unverified');
+                }else{
+                    return false;
+                }
+            }
             $result = $this->dao->setUserInfo($user, $changes);
             return $result;
         }
