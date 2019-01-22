@@ -1,4 +1,5 @@
 @clipunit :1rem;
+@errormsg :#fcc;
 
 .paperclip__selfinfo {
   padding: 6 * @clipunit 8vw 0;
@@ -289,4 +290,19 @@
 }
 .noshow {
   display: none;
+}
+
+.dokuwiki #dw__editform {
+  display: none;
+}
+
+.dokuwiki .toolbar {
+  display: none;
+}
+
+noscript {
+  background: @errormsg;
+  border: 0.0625rem solid @errormsg;
+  text-align: center;
+  font-size: 2.375rem;
 }

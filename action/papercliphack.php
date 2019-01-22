@@ -5,6 +5,8 @@
  * @license GPL 2 http://www.gnu.org/licenses/gpl-2.0.html
  * @author  Tongyu Nie <marktnie@gmail.com>
  */
+include dirname(__FILE__).'/../aliyuncs/aliyun-php-sdk-core/Config.php';
+use Green\Request\V20180509 as Green;
 
 require dirname(__FILE__).'/../vendor/autoload.php';
 
@@ -12,7 +14,7 @@ use \dokuwiki\Form\Form;
 use \dokuwiki\Ui;
 use \dokuwiki\paperclip;
 use Caxy\HtmlDiff\HtmlDiff;
-
+use \dokuwiki\Action;
 
 include dirname(__FILE__).'/../paperclipDAO.php';
 
@@ -118,6 +120,18 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             'modifyRegisterForm'
         );
         $controller->register_hook(
+            'HTML_EDITFORM_OUTPUT',
+            'AFTER',
+            $this,
+            'modifyEditFormAfter'
+        );
+        $controller->register_hook(
+            'HTML_EDITFORM_OUTPUT',
+            'BEFORE',
+            $this,
+            'modifyEditFormBefore'
+        );
+        $controller->register_hook(
             'TPL_ACT_RENDER',
             'AFTER',
             $this,
@@ -162,6 +176,15 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             $event->preventDefault();
             // Still need to mute the
 
+        } elseif ($_POST['call']=='clip_submit') {
+            global $_REQUEST;
+            $editcontent = $_REQUEST['wikitext'];
+            $res = $this->_filter($editcontent);
+            if (!$res) {
+                echo 'false';
+            }else{
+                echo 'true';
+            }
         }
     }
 
@@ -211,6 +234,24 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     }
 
     /**
+     * @param Doku_Event $event
+     * @param $param
+     */
+    public function modifyEditFormAfter(Doku_Event& $event, $param)
+    {
+        print '<noscript>您的浏览器未启用脚本，请启用后重试！</noscript>';
+    }
+
+    /**
+     * @param Doku_Event $event
+     * @param $param
+     */
+    public function modifyEditFormBefore(Doku_Event& $event, $param)
+    {
+        $event->data->_hidden['call'] = 'clip_submit';
+    }
+
+    /**
      * @param $registerFormContent
      *
      * Modify the metadata in register form
@@ -248,25 +289,23 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     public function handle_common_wikipage_save(Doku_Event $event, $param)
     {
         global $INFO;
-
         $pageid = $event->data['id'];
         $summary = $event->data['summary'];
         $editor = $INFO['client'];
         $htmlDiff = new HtmlDiff($event->data['oldContent'], $event->data['newContent']);
         $content = $htmlDiff->build();
         $content = '<?xml version="1.0" encoding="UTF-8"?><div>'.$content.'</div>';
-
         $dom = new DOMDocument;
         $editSummary = '';
         if ($dom->loadXML($content)) {
             $xpath = new DOMXPath($dom);
             $difftext = $xpath->query('ins |del');
-
             foreach ($difftext as $wtf) {
                 $nodeName = $wtf->nodeName;
                 $editSummary .= "<$nodeName>".$wtf->nodeValue."</$nodeName>";
             }
         }
+
         $result = $this->dao->insertEditlog($pageid, $editSummary, $editor);
         if (!$result) {
             echo 'wikipage_save: failed to add editlog into DB';
@@ -1165,6 +1204,51 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
       }
 
 
+    }
+
+    /**
+     * filter edit
+     *
+     * @return bool
+     */
+    protected function _filter($edit){
+        date_default_timezone_set("PRC");
+        $ak = parse_ini_file(dirname(__FILE__)."/../aliyun.ak.ini");
+        $iClientProfile = DefaultProfile::getProfile("cn-shanghai", $ak["accessKeyId"], $ak["accessKeySecret"]); // TODO
+        DefaultProfile::addEndpoint("cn-shanghai", "cn-shanghai", "Green", "green.cn-shanghai.aliyuncs.com");
+        $client = new DefaultAcsClient($iClientProfile);
+        $request = new Green\TextScanRequest();
+        $request->setMethod("POST");
+        $request->setAcceptFormat("JSON");
+        $task1 = array('dataId' =>  uniqid(),
+            'content' => $edit
+        );
+        
+        $request->setContent(json_encode(array("tasks" => array($task1),
+            "scenes" => array("antispam"))));
+        try {
+            $response = $client->getAcsResponse($request);
+            if(200 == $response->code){
+                $taskResults = $response->data;
+                foreach ($taskResults as $taskResult) {
+                    if(200 == $taskResult->code){
+                        $sceneResults = $taskResult->results;
+                        foreach ($sceneResults as $sceneResult) {
+                            $scene = $sceneResult->scene;
+                            $suggestion = $sceneResult->suggestion;
+                            //do something
+                            if ($suggestion == 'pass')
+                                return true;
+                            else
+                                return false;
+                        }
+                    }
+                }
+            }
+            return false;
+        } catch (Exception $e) {
+            echo $e;
+        }
     }
 
 }
