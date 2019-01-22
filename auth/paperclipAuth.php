@@ -291,7 +291,7 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
     {
       $smtp = $this->loadHelper('smtp');
 
-      $link = "https://localhost/doku.php?mail=".$mail."&verify=".$verficationCode;
+      $link = "https://ipaperclip.net/doku.php?mail=".$mail."&verify=".$verficationCode;
       $type = 'verification';
 
       $info = array(

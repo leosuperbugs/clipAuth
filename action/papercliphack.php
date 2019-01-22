@@ -14,7 +14,6 @@ use \dokuwiki\Form\Form;
 use \dokuwiki\Ui;
 use \dokuwiki\paperclip;
 use Caxy\HtmlDiff\HtmlDiff;
-use \dokuwiki\Action;
 
 include dirname(__FILE__).'/../paperclipDAO.php';
 
@@ -289,23 +288,25 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     public function handle_common_wikipage_save(Doku_Event $event, $param)
     {
         global $INFO;
+
         $pageid = $event->data['id'];
         $summary = $event->data['summary'];
         $editor = $INFO['client'];
         $htmlDiff = new HtmlDiff($event->data['oldContent'], $event->data['newContent']);
         $content = $htmlDiff->build();
         $content = '<?xml version="1.0" encoding="UTF-8"?><div>'.$content.'</div>';
+
         $dom = new DOMDocument;
         $editSummary = '';
         if ($dom->loadXML($content)) {
             $xpath = new DOMXPath($dom);
             $difftext = $xpath->query('ins |del');
+
             foreach ($difftext as $wtf) {
                 $nodeName = $wtf->nodeName;
                 $editSummary .= "<$nodeName>".$wtf->nodeValue."</$nodeName>";
             }
         }
-
         $result = $this->dao->insertEditlog($pageid, $editSummary, $editor);
         if (!$result) {
             echo 'wikipage_save: failed to add editlog into DB';
