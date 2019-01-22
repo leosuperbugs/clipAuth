@@ -17,3 +17,18 @@ $meta['passMaxLen'] = array('numericopt');
 $meta['fullnameMaxLen'] = array('numericopt');
 $meta['editors'] = array('string');
 $meta['resultperpage'] = array('numericopt');
+//$conf['wechatlink'] = '
+//  https://open.weixin.qq.com/connect/qrconnect?
+//  appid=wxff579daeee2f39e7
+//  &redirect_uri=http://ipaperclip.net?ext=wechat
+//  &response_type=code
+//  &scope=snsapi_login
+//  &state=1#wechat_redirect';
+$meta['wechatlink'] = array('string');
+$meta['wechatAppId'] = array('string');
+$meta['wechatRediURI'] = array('string');
+$meta['wechatRespType'] = array('string');
+$meta['wechatScope'] = array('string');
+$meta['wechatState'] = array('string');
+// Weibo
+$meta['weibolink'] = array('string');

@@ -7,3 +7,4 @@
 .idea/*
 settings.php
 _test/
+*.DS_STORE

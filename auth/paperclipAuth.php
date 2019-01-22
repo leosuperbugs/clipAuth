@@ -15,12 +15,14 @@ define("__SEC__DAY__", 86400);
 define("__MUTED__", 'muted');
 define("__NUKED__", 'nuked');
 
+
 class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
 {
 
-    var $pdo;
+//    var $pdo;
     var $settings;
     var $dao;
+    var $cache;
 
     /**
      * Constructor.
@@ -40,10 +42,11 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
         $this->cando['getUsers']    = true; // can a (filtered) list of users be retrieved?
         $this->cando['getUserCount']= true; // can the number of users be retrieved?
         $this->cando['getGroups']   = true; // can a list of available groups be retrieved?
-//        $this->cando['external']    = true; // does the module do external auth checking?
+        $this->cando['external']    = true; // does the module do external auth checking?
         $this->cando['logout']      = true; // can the user logout again? (eg. not possible with HTTP auth)
 
         $this->dao = new dokuwiki\paperclip\paperclipDAO();
+        $this->cache = new dokuwiki\paperclip\paperclipCache();
 
         $this->success = true;
     }
@@ -65,28 +68,39 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
      *
      * @return  bool             true on successful auth
      */
-    //public function trustExternal($user, $pass, $sticky = false)
-    //{
-        /* some example:
+    public function trustExternal($user, $pass, $sticky = false)
+    {
 
         global $USERINFO;
         global $conf;
         $sticky ? $sticky = true : $sticky = false; //sanity check
 
         // do the checking here
+        $isExtLogin = $_GET['ext'];
 
-        // set the globals if authed
-        $USERINFO['name'] = 'FIXME';
-        $USERINFO['mail'] = 'FIXME';
-        $USERINFO['grps'] = array('FIXME');
-        $_SERVER['REMOTE_USER'] = $user;
-        $_SESSION[DOKU_COOKIE]['auth']['user'] = $user;
-        $_SESSION[DOKU_COOKIE]['auth']['pass'] = $pass;
-        $_SESSION[DOKU_COOKIE]['auth']['info'] = $USERINFO;
-        return true;
+        // External login
+        if ($isExtLogin) {
+            // Handle the wechat login
+            if ($isExtLogin === $this->getLang('wechat')) {
+                // First to fetch the wechat account info
+                // And varify the session
 
-        */
-    //}
+                // Then use dao to save user data
+
+            }
+            // Handle the weibo login
+            elseif ($isExtLogin === $this->getLang('weibo')) {
+
+            }
+        }
+
+//        $_SERVER['REMOTE_USER'] = $user;
+//        $_SESSION[DOKU_COOKIE]['auth']['user'] = $user;
+//        $_SESSION[DOKU_COOKIE]['auth']['pass'] = $pass;
+//        $_SESSION[DOKU_COOKIE]['auth']['info'] = $USERINFO;
+//        return true;
+        return auth_login($user, $pass, $sticky);
+    }
 
     private function isInPrison($record) {
         $time = $record['time'];
