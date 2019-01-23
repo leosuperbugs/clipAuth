@@ -20,9 +20,11 @@ $conf['wechat'] = 'wechat';
 $conf['weibo'] = 'weibo';
 // !!!! parameterize the URL here dam it
 $conf['wechatlink'] = 'https://open.weixin.qq.com/connect/qrconnect';
+$conf['wechatTokenURL'] = 'https://api.weixin.qq.com/sns/oauth2/access_token';
 $conf['wechatAppId'] = 'wxff579daeee2f39e7';
 $conf['wechatRediURI'] = 'http://ipaperclip.net?ext=wechat';
 $conf['wechatRespType'] = 'code';
 $conf['wechatScope'] = 'snsapi_login';
+$conf['wechatSecret'] = '2edc852df4fb54111b92027cbe46ac9a';
 // Weibo
 $conf['weibolink'] = '';

@@ -22,7 +22,6 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
 //    var $pdo;
     var $settings;
     var $dao;
-    var $cache;
 
     /**
      * Constructor.
@@ -46,7 +45,6 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
         $this->cando['logout']      = true; // can the user logout again? (eg. not possible with HTTP auth)
 
         $this->dao = new dokuwiki\paperclip\paperclipDAO();
-        $this->cache = new dokuwiki\paperclip\paperclipCache();
 
         $this->success = true;
     }
@@ -80,10 +78,23 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
 
         // External login
         if ($isExtLogin) {
+            // Import helper
+            $hlp = $this->loadHelper('clipauth_paperclipHelper');
+
             // Handle the wechat login
             if ($isExtLogin === $this->getLang('wechat')) {
-                // First to fetch the wechat account info
-                // And varify the session
+                $state = $_GET['state'];
+                $code = $_GET['code'];
+
+                // Varify the session
+                $isValidState = $hlp->checkState($state);
+
+                // Avoid attack
+                if (!$isValidState) return false;
+
+                // Get user data from wechat
+                $wechatTokenURL = $hlp->wechatTokenURL($code);
+                $response = http_get($wechatTokenURL);
 
                 // Then use dao to save user data
 

@@ -53,7 +53,7 @@ define('__NUKED__', 'nuked');
 
 class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 {
-    private $pdo;
+//    private $pdo;
     private $settings;
     // Some constants relating to the pagination of personal centre
     private $editperpage;
@@ -1170,22 +1170,10 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     }
 
     private function externalLoginUI() {
-        // Generate random number
-        // And combine it with session id
-        // To avoid CSRF
-
         // Make up the link
-//        $hlp = plugin_load('helper', 'clipauth_paperclipHelper');
         $hlp = $this->loadHelper('clipauth_paperclipHelper');
 
-        $wechatLink = $hlp->wechatLoginLink('');
-//            = $this->getConf('wechatlink')
-//            . '?appid=' . $this->getConf('wechatAppId')
-//            . '&redirect_uri=' . $this->getConf('wechatRediURI')
-//            . '&response_type=' . $this->getConf('wechatRespType')
-//            . '&scope=' . $this->getConf('wechatScope')
-//            . '&state=' . 'test'
-//            . '#wechat_redirect';
+        $wechatLink = $hlp->wechatLoginLink();
 
             return "
     <div class='paperclip__extlogin'>

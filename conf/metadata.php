@@ -25,10 +25,12 @@ $meta['resultperpage'] = array('numericopt');
 //  &scope=snsapi_login
 //  &state=1#wechat_redirect';
 $meta['wechatlink'] = array('string');
+$meta['wechatTokenURL'] = array('string');
 $meta['wechatAppId'] = array('string');
 $meta['wechatRediURI'] = array('string');
 $meta['wechatRespType'] = array('string');
 $meta['wechatScope'] = array('string');
 $meta['wechatState'] = array('string');
+$meta['wechatSecret'] = array('string');
 // Weibo
 $meta['weibolink'] = array('string');

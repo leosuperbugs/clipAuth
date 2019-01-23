@@ -63,6 +63,33 @@ class paperclipDAO
     }
 
     /**
+     * Modify table auth_username
+     *
+     * @param $id
+     * @param $username
+     * @param $encodedPass
+     * @return bool
+     */
+    public function addAuthUsername($id, $username, $encodedPass) {
+        try {
+            $sql = "insert into {$this->settings['auth_username']} (id, username, password)
+            values 
+            (:id, :username, :password)";
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':id', $id, PDO::PARAM_INT);
+            $statement->bindValue(':username', $username);
+            $statement->bindValue(':password', $encodedPass);
+
+            $result = $statement->execute();
+            return $result;
+        } catch (\PDOException $e) {
+            echo 'add auth username';
+            echo $e->getMessage();
+            return false;
+        }
+    }
+
+    /**
      * Add user information to database
      *
      * @param $user
@@ -76,20 +103,26 @@ class paperclipDAO
     public function addUser($user, $pass, $name, $mail, $grps, $verficationCode) {
         try {
             // create the user in database
+//             "(id, username, password, realname, mailaddr, identity, verifycode)
+//            (null, :user, :pass, :name, :mail, :grps, :vc)";
             $sql = "insert into ".$this->settings['usersinfo'].
-                "(id, username, password, realname, mailaddr, identity, verifycode)
+                " (id, username, realname, mailaddr, identity, verifycode, password)
             values
-            (null, :user, :pass, :name, :mail, :grps, :vc)";
+                (null, :user, :name, :mail, :grps, :vc, null)";
             $statement = $this->pdo->prepare($sql);
             $statement->bindValue(':user', $user);
-            $statement->bindValue(':pass', $pass);
+//            $statement->bindValue(':pass', $pass);
             $statement->bindValue(':name', $name);
             $statement->bindValue(':mail', $mail);
             $statement->bindValue(':grps', $grps);
             $statement->bindValue(':vc', $verficationCode);
 
             $result = $statement->execute();
-            return $result;
+            // Add user password into auth table
+            $id = $this->getUserID($user);
+            $addAuthResult = $this->addAuthUsername($id, $user, $pass);
+
+            return ($result && $addAuthResult);
 
         } catch (\PDOException $e) {
             echo 'addUser';
@@ -148,6 +181,43 @@ class paperclipDAO
         }
     }
 
+    public function getUserPassword($user) {
+        try {
+            $sql = "select password from {$this->settings['auth_username']} where username=:user";
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':username', $user);
+            $statement->execute();
+
+            $result = $statement->fetch(PDO::FETCH_ASSOC);
+
+            if ($result == false) {
+                return false;
+            }
+
+            return $result['password'];
+        } catch (\PDOException $e) {
+            echo 'get auth username';
+            echo $e->getMessage();
+            return false;
+        }
+    }
+
+    /**
+     * For user registration
+     *
+     * @param $user
+     * @return mixed
+     */
+    private function getUserID($user) {
+        $sql = "select id from {$this->settings['usersinfo']} where username=:user";
+        $statement = $this->pdo->prepare($sql);
+        $statement->bindValue(':user', $user);
+        $statement->execute();
+        $result = $statement->fetch(PDO::FETCH_ASSOC);
+
+        return $result['id'];
+
+    }
     /**
      * Get user info from username
      *
@@ -155,12 +225,26 @@ class paperclipDAO
      * @return bool
      */
     public function getUserData($user) {
-        $sql = 'select * from '.$this->settings['usersinfo'].' where username = :username';
+        $userinfo = $this->settings['usersinfo'];
+        $authUsername = $this->settings['auth_username'];
+
+        $sql = "select 
+                $userinfo.id,
+                $userinfo.username,
+                $userinfo.realname,
+                $userinfo.mailaddr,
+                $authUsername.password,
+                $userinfo.identity
+                from $userinfo 
+                inner join $authUsername on $userinfo.id = $authUsername.id
+                where $userinfo.username = :username";
+
         $statement = $this->pdo->prepare($sql);
         $statement->bindValue(':username', $user);
         $statement->execute();
 
         $result = $statement->fetch(PDO::FETCH_ASSOC);
+//        $result['password'] = $this->getUserPassword($user);
 
         if ($result == false) {
             return false;
@@ -177,7 +261,21 @@ class paperclipDAO
      * @return bool
      */
     public function getUserDataByEmail($email) {
-        $sql = 'select * from '.$this->settings['usersinfo'].' where mailaddr = :email';
+        $userinfo = $this->settings['usersinfo'];
+        $authUsername = $this->settings['auth_username'];
+
+        $sql = "select 
+                $userinfo.id,
+                $userinfo.username,
+                $userinfo.realname,
+                $userinfo.mailaddr,
+                $authUsername.password,
+                $userinfo.identity
+                from $userinfo 
+                inner join $authUsername on $userinfo.id = $authUsername.id
+                where $userinfo.mailaddr = :email";
+
+//        $sql = 'select * from '.$this->settings['usersinfo'].' where mailaddr = :email';
         $statement = $this->pdo->prepare($sql);
         $statement->bindValue(':email', $email);
         $statement->execute();
@@ -504,22 +602,22 @@ class paperclipDAO
      * @param $pass
      * @return bool
      */
-    public function setUserInfoO($user, $pass) {
-        try {
-            $sql = "update ".$this->settings['usersinfo'] ." set password=:pass where username=:user";
-            $statement = $this->pdo->prepare($sql);
-            $statement->bindValue(':pass', $pass);
-            $statement->bindValue(':user', $user);
-            $result = $statement->execute();
-
-            return $result;
-        } catch (\PDOException $e) {
-            echo 'setUserInfo';
-            echo $e->getMessage();
-            return false;
-        }
-
-    }
+//    public function setUserInfoO($user, $pass) {
+//        try {
+//            $sql = "update ".$this->settings['usersinfo'] ." set password=:pass where username=:user";
+//            $statement = $this->pdo->prepare($sql);
+//            $statement->bindValue(':pass', $pass);
+//            $statement->bindValue(':user', $user);
+//            $result = $statement->execute();
+//
+//            return $result;
+//        } catch (\PDOException $e) {
+//            echo 'setUserInfo';
+//            echo $e->getMessage();
+//            return false;
+//        }
+//
+//    }
 
     private function checkFirstAppendComma(&$sql, &$notFirst) {
         if ($notFirst) {
@@ -529,15 +627,38 @@ class paperclipDAO
         }
     }
 
+    /**
+     * Set password for table auth_username
+     *
+     * @param $user
+     * @param $pass
+     * @return bool
+     */
+    public function setUsernamePass($user, $pass) {
+        try {
+            $sql = "update {$this->settings['auth_username']} set password=:password where username=:user";
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':user', $user);
+            $statement->bindValue(':password', $pass);
+            $result = $statement->execute();
+
+            return $result;
+        } catch (\PDOException $e) {
+            echo 'ser auth username';
+            echo $e->getMessage();
+            return false;
+        }
+    }
+
     public function setUserInfo($user, $changes) {
         $sql = "update ".$this->settings['usersinfo']." set ";
         $notFirst = false;
 
         // Process the updated content
-        if ($changes['pass']) {
-            $this->checkFirstAppendComma($sql, $notFirst);
-            $sql .= " password=:pass ";
-        }
+//        if ($changes['pass']) {
+//            $this->checkFirstAppendComma($sql, $notFirst);
+//            $sql .= " password=:pass ";
+//        }
         if ($changes['mail']) {
             $this->checkFirstAppendComma($sql, $notFirst);
             $sql .= " mailaddr=:mail ";
@@ -554,8 +675,10 @@ class paperclipDAO
             $statement = $this->pdo->prepare($sql);
             // Bind values here
             if ($changes['pass']) {
+                // Now password is stored in another table
                 $pass = auth_cryptPassword($changes['pass']);
-                $statement->bindValue(':pass', $pass);
+                $this->setUsernamePass($user, $pass);
+//                $statement->bindValue(':pass', $pass);
             }
             if ($changes['mail']) {
                 $statement->bindValue(':mail', $changes['mail']);
