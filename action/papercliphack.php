@@ -1233,7 +1233,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             if(__OKCODE__ == $response->code){
                 $taskResults = $response->data;
                 foreach ($taskResults as $taskResult) {
-                    if(200 == $taskResult->code){
+                    if(__OKCODE__ == $taskResult->code){
                         $sceneResults = $taskResult->results;
                         foreach ($sceneResults as $sceneResult) {
                             $scene = $sceneResult->scene;
