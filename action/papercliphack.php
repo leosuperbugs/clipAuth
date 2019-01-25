@@ -49,6 +49,7 @@ define('__REGISTER_ORDER__', array(
 ));
 define('__MUTED__', 'muted');
 define('__NUKED__', 'nuked');
+define('__OKCODE__', 200);
 
 class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 {
@@ -178,7 +179,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         } elseif ($_POST['call']=='clip_submit') {
             global $_REQUEST;
             $editcontent = $_REQUEST['wikitext'];
-            $res = $this->_filter($editcontent);
+            $res = $this->contentFilter($editcontent);
             if (!$res) {
                 echo 'false';
             }else{
@@ -1212,11 +1213,11 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
      *
      * @return bool
      */
-    protected function _filter($edit){
+    protected function contentFilter($edit){
         date_default_timezone_set("PRC");
         $ak = parse_ini_file(dirname(__FILE__)."/../aliyun.ak.ini");
-        $iClientProfile = DefaultProfile::getProfile("cn-shanghai", $ak["accessKeyId"], $ak["accessKeySecret"]); // TODO
-        DefaultProfile::addEndpoint("cn-shanghai", "cn-shanghai", "Green", "green.cn-shanghai.aliyuncs.com");
+        $iClientProfile = DefaultProfile::getProfile($this->getConf('aliregion'), $ak["accessKeyId"], $ak["accessKeySecret"]); // TODO
+        DefaultProfile::addEndpoint($this->getConf('aliregion'), $this->getConf('aliregion'), $this->getConf('alido'), $this->getConf('aliFilterUrl'));
         $client = new DefaultAcsClient($iClientProfile);
         $request = new Green\TextScanRequest();
         $request->setMethod("POST");
@@ -1229,7 +1230,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             "scenes" => array("antispam"))));
         try {
             $response = $client->getAcsResponse($request);
-            if(200 == $response->code){
+            if(__OKCODE__ == $response->code){
                 $taskResults = $response->data;
                 foreach ($taskResults as $taskResult) {
                     if(200 == $taskResult->code){
