@@ -1173,7 +1173,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         // Make up the link
         $hlp = $this->loadHelper('clipauth_paperclipHelper');
 
-        $wechatLink = $hlp->wechatLoginLink();
+        $wechatLink = $hlp->getAuthURL();
 
             return "
     <div class='paperclip__extlogin'>

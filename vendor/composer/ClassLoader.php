@@ -51,7 +51,7 @@ class ClassLoader
     private $prefixesPsr0 = array();
     private $fallbackDirsPsr0 = array();
 
-    private $useIncludePath = true;
+    private $useIncludePath = false;
     private $classMap = array();
     private $classMapAuthoritative = false;
     private $missingClasses = array();

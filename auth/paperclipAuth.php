@@ -82,21 +82,59 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
             $hlp = $this->loadHelper('clipauth_paperclipHelper');
 
             // Handle the wechat login
-            if ($isExtLogin === $this->getLang('wechat')) {
-                $state = $_GET['state'];
+            if ($isExtLogin === $this->getConf('wechat')) {
                 $code = $_GET['code'];
 
                 // Varify the session
-                $isValidState = $hlp->checkState($state);
-
-                // Avoid attack
-                if (!$isValidState) return false;
+                // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                // Should be enabled in the future
+//                if (empty($_GET['state']) || ($_GET['state'] !== rtrim($_SESSION['oauth2state'], '#wechat_redirect'))) {
+//
+//                    unset($_SESSION['oauth2state']);
+//                    exit('Invalid state');
+//
+//                }
 
                 // Get user data from wechat
-                $wechatTokenURL = $hlp->wechatTokenURL($code);
-                $response = http_get($wechatTokenURL);
+                // First, get access token from code
+                $authOAuthData = [];
+                $accessToken = $hlp->getAccessToken();
+                $values = $accessToken->getValues();
+                $authOAuthData['accessToken'] = $accessToken->getToken();
+                $authOAuthData['refreshToken'] = $accessToken->getRefreshToken();
+//                $authOAuthData['username'] = $accessToken->getUsername();
+                $authOAuthData['open_id'] = $values['openid'];
+                $authOAuthData['union_id'] = $values['unionid'];
 
+                // Check if user have already registered
+                if ($this->dao->getOAuthUserByOpenid($this->getConf('wechat'), $values['openid'])) {
+                    // Log user in here
+                    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    return true;
+                }
                 // Then use dao to save user data
+                else {
+                    // get user info
+                    $userinfo = $hlp->getWechatInfo($accessToken->getToken(), $values['openid']);
+                    $authOAuthData['username'] = $userinfo['nickname'];
+
+                    // set default group if no groups specified
+                    $grps = array($conf['defaultgroup']);
+                    $grps = join(',', $grps);
+
+                    // this function is not finished
+                    $this->dao->addUser(
+                        $authOAuthData['open_id'],
+                        null,
+                        $authOAuthData['username'],
+                        null,
+                        $grps,
+                        null
+                        );
+                    $this->dao->addAuthOAuth($authOAuthData, $this->getConf('wechat'));
+                    // Log user in here
+                    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                }
 
             }
             // Handle the weibo login

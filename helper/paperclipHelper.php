@@ -11,9 +11,11 @@
  */
 if(!defined('DOKU_INC')) die();
 
+require dirname(__FILE__).'/../vendor/autoload.php';
+
 use \dokuwiki\paperclip;
 
-define("__STATE__SPLTR__", "+");
+define("__STATE__SPLTR__", "-");
 
 /**
  * Help the Auth Plugin
@@ -23,34 +25,22 @@ class helper_plugin_clipauth_paperclipHelper extends DokuWiki_Plugin {
 
     private $redis;
     private $settings;
+    // oauth web provider
+    private $provider;
 
     public function __construct()
     {
-        // No default constructor
-//        parent::__construct();
 
         require dirname(__FILE__).'/../settings.php';
 
         $this->redis = new \Redis();
         $this->redis->connect($this->settings['rhost'], $this->settings['rport']);
         $this->redis->auth($this->settings['rpassword']);
-    }
-
-    /**
-     * Avoid CSFR
-     *
-     * @return string
-     */
-    private function generateState() {
-        // RNG
-        $random = rand(0, 10000);
-        $session = session_id();
-
-        // Save session and rng to redis
-        $this->redis->set($session, $random);
-
-        // return state
-        return $session . __STATE__SPLTR__ . $random;
+        $this->provider = new \Oakhope\OAuth2\Client\Provider\WebProvider([
+            'appid' => $this->getConf('wechatAppId'),
+            'secret' => $this->getConf('wechatSecret'),
+            'redirect_uri' => $this->getConf('wechatRediURI')
+        ]);
     }
 
     /**
@@ -59,63 +49,33 @@ class helper_plugin_clipauth_paperclipHelper extends DokuWiki_Plugin {
      * @param $state
      * @return string
      */
-    public function wechatLoginLink() {
-        $state = $this->generateState();
-        $uri = $this->getConf('wechatRediURI');
-        $uri = urlencode($uri);
+    public function getAuthURL() {
+        // Fetch the authorization URL from the provider; this returns the
+        // urlAuthorize option and generates and applies any necessary parameters
+        // (e.g. state).
+        $authURL = $this->provider->getAuthorizationUrl();
 
-        $wechatLink = $this->getConf('wechatlink')
-            . '?appid=' . $this->getConf('wechatAppId')
-            . '&redirect_uri=' . $uri
-            . '&response_type=' . $this->getConf('wechatRespType')
-            . '&scope=' . $this->getConf('wechatScope')
-            . '&state=' . $state
-            . '#wechat_redirect';
-        return $wechatLink;
+        // Get the state generated for you and store it to the session.
+        $_SESSION['oauth2state'] = $this->provider->getState();
+
+        return $authURL;
     }
 
-    /**
-     * Compose wechat access token link
-     *
-     * @param $code
-     * @return string
-     */
-    public function wechatTokenURL($code) {
-        $url = $this->getConf('wechatTokenURL')
-            . '?appid=' . $this->getConf('wechatAppId')
-            . '&secret=' . $this->getConf('wechatSecret')
-            . '&code=' . $code
-            . '&grant_type=authorization_code';
-        return $url;
-    }
-
-    /**
-     * Check if the state param is valid
-     *
-     * @param $state
-     * @return bool
-     */
-    public function checkState($state) {
-        $sessionAndRN = explode(__STATE__SPLTR__, $state);
-        $session = $sessionAndRN[0];
-        $randonNum = $sessionAndRN[1];
-
-        if ($session && $randonNum) {
-            $cachedRandonNum = $this->redis->get($session);
-            if ($cachedRandonNum == $randonNum) {
-                return true;
-            }
-        }
-        return false;
-    }
 
     /**
      * To get the user info from Wechat
      *
      * @param $code
      */
-    public function getWechatInfo($code) {
-
+    public function getWechatInfo($accessToken, $openid) {
+        $query  = 'access_token=' . $accessToken . '&openid=' . $openid;
+        $url = $this->getConf('wechatUserinfoURL') . '?' .$query;
+        $data = file_get_contents($url);
+        if (!$data) {
+            return false;
+        }
+        $data = json_decode($data, true);
+        return $data;
     }
 
     /**
@@ -123,8 +83,24 @@ class helper_plugin_clipauth_paperclipHelper extends DokuWiki_Plugin {
      *
      * @param $code
      */
-    public function getWeiboInfo($code) {
+    public function getWeiboInfo($accessToken) {
 
+    }
+
+    /**
+     * To get wechat token
+     *
+     * @param $wechatTokenURL
+     *
+     * @return JSON
+     */
+    public function getAccessToken() {
+        return ($this->provider->getAccessToken(
+            'authorization_code',
+            [
+                'code' => $_GET['code'],
+            ]
+        ));
     }
 
 }

@@ -89,6 +89,46 @@ class paperclipDAO
         }
     }
 
+    public function addAuthOAuth($data, $third_party) {
+        $sql = "insert into {$this->settings['auth_oauth']} (
+                    id, username, third_party, credential, 
+                    refresh_token, union_id, open_id, create_time, refresh_time)
+                values (
+                    :id, :username, :third_party, :accessToken, 
+                    :refreshToken, union_id, open_id, null, null)";
+
+        // Unfinished
+        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+    }
+
+    /**
+     * Get record from table auth_oauth
+     * @param $third_party
+     * @param $openid
+     * @return mixed
+     */
+    public function getOAuthUserByOpenid($third_party, $openid) {
+        try {
+            $sql = "select username from {$this->settings['auth_oauth']} where third_party=:third_party and openid=:openid";
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':third_party', $third_party);
+            $statement->bindValue(':openid', $openid);
+            $statement->execute();
+
+            $result = $statement->fetch(PDO::FETCH_ASSOC);
+            if ($result) {
+                return $result['username'];
+            } else {
+                return false;
+            }
+        } catch (\PDOException $e) {
+            echo 'get oauth user by openid';
+            echo $e->getMessage();
+            return false;
+        }
+    }
     /**
      * Add user information to database
      *
