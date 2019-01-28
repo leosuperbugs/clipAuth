@@ -50,6 +50,7 @@ define('__REGISTER_ORDER__', array(
 define('__MUTED__', 'muted');
 define('__NUKED__', 'nuked');
 define('__OKCODE__', 200);
+
 //admin search conditions field
 define('__USERTABLEALIAS__', 'us');
 define('__COMMENTABLEALIAS__', 'com');
@@ -62,6 +63,7 @@ define('__CONDITIONS__', array(
     'conSummary' => 'summary',
     'conIdentity' => 'identity',
 ));
+
 
 class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 {

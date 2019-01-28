@@ -19,3 +19,4 @@ $conf['resultperpage'] = 10;
 $conf['aliregion'] = "cn-shanghai";
 $conf['aliFilterUrl'] = "green.cn-shanghai.aliyuncs.com";
 $conf['alido'] =  "Green";
+
