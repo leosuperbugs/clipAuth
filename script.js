@@ -15,4 +15,27 @@ jQuery( document ).ready(function($) {
     //         fail(function () {swal("测试失败", "..", 'error')});
     //         ev.preventDefault();
     //     });
+    $("#dw__editform")
+        .submit(
+        function (ev) {
+            var res = '';
+            $.ajax({
+                url: '/lib/exe/ajax.php',
+                async: false,
+                dataType:'text',
+                type:"POST",
+                data: $(this).serialize(),
+                success:function(msg){
+                    var reg = /true/;
+                    res = msg.match(reg);                    
+                }
+        });
+        if(!res){ 
+            swal('编辑失败', "评论含有敏感词", "error");
+            return false; 
+        }
+    });
+
+    $("#dw__editform").css("display","block");
+    $(".toolbar").css("display","block");
 });
