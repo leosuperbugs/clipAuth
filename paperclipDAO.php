@@ -256,6 +256,12 @@ class paperclipDAO
         }
     }
 
+    /**
+     * Get password from auth_username
+     *
+     * @param $user
+     * @return bool
+     */
     public function getUserPassword($user) {
         try {
             $sql = "select password from {$this->settings['auth_username']} where username=:user";
@@ -293,6 +299,7 @@ class paperclipDAO
         return $result['id'];
 
     }
+
     /**
      * Get user info from username
      *
@@ -303,6 +310,9 @@ class paperclipDAO
         $userinfo = $this->settings['usersinfo'];
         $authUsername = $this->settings['auth_username'];
 
+        // should use left join here maybe?
+        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!111
+        // Changes needed
         $sql = "select 
                 $userinfo.id,
                 $userinfo.username,
@@ -311,6 +321,7 @@ class paperclipDAO
                 $authUsername.password,
                 $userinfo.identity
                 from $userinfo 
+                
                 inner join $authUsername on $userinfo.id = $authUsername.id
                 where $userinfo.username = :username";
 

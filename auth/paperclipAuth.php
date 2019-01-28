@@ -53,7 +53,6 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
     /**
      * Log off the current user [ OPTIONAL ]
      */
-    // public function logOff()
     // {
     // }
 
@@ -64,10 +63,19 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
      * @param int    $validityPeriodInSeconds optional, per default 1 Year
      */
     private function setUserCookie($user, $sticky, $servicename, $validityPeriodInSeconds = 31536000) {
+        global $USERINFO;
+        global $auth;
+
         $cookie = base64_encode($user).'|'.((int) $sticky).'|'.base64_encode('oauth').'|'.base64_encode($servicename);
         $cookieDir = empty($conf['cookiedir']) ? DOKU_REL : $conf['cookiedir'];
         $time      = $sticky ? (time() + $validityPeriodInSeconds) : 0;
         setcookie(DOKU_COOKIE,$cookie, $time, $cookieDir, '',($conf['securecookie'] && is_ssl()), true);
+
+        $_SERVER['REMOTE_USER'] = $user;
+        $_SESSION[DOKU_COOKIE]['auth']['user'] = $user;
+//                    $_SESSION[DOKU_COOKIE]['auth']['pass'] = $pass;
+        $_SESSION[DOKU_COOKIE]['auth']['info'] = $USERINFO;
+        $USERINFO = $auth->getUserData($user);
     }
 
     /**
@@ -93,9 +101,12 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
             $cookieuser = base64_decode($cookieuser, true);
             $auth = base64_decode($auth, true);
             $servicename = base64_decode($servicename, true);
-//            if ($auth === 'oauth') {
-//                $this->relogin($servicename);
-//            }
+
+            // UNFINISHED
+            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            // First we check the user here
+            // Then we return user info to dokuwiki
+            if ($this->dao->getUserData($user))
             return true;
         }
 
@@ -163,10 +174,6 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
                     // Log user in here
                     $this->setUserCookie($username, $sticky, $this->getConf('wechat'));
 
-                    $_SERVER['REMOTE_USER'] = $user;
-                    $_SESSION[DOKU_COOKIE]['auth']['user'] = $username;
-//                    $_SESSION[DOKU_COOKIE]['auth']['pass'] = $pass;
-                    $_SESSION[DOKU_COOKIE]['auth']['info'] = $USERINFO;
                     return true;
 
                 }
