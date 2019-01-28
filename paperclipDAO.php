@@ -90,6 +90,7 @@ class paperclipDAO
     }
 
     public function addAuthOAuth($data, $third_party) {
+        $id = $this->getUserID($data['username']);
         $sql = "insert into {$this->settings['auth_oauth']} (
                     id, username, third_party, credential, 
                     refresh_token, union_id, open_id, create_time, refresh_time)
@@ -97,10 +98,19 @@ class paperclipDAO
                     :id, :username, :third_party, :accessToken, 
                     :refreshToken, union_id, open_id, null, null)";
 
-        // Unfinished
-        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        $statement = $this->pdo->prepare($sql);
 
+        $statement->bindValue(":id", $id);
+        $statement->bindValue(":username", $data['username']);
+        $statement->bindValue(":third_party", $third_party);
+        $statement->bindValue(":accessToken", $data['accessToken']);
+        $statement->bindValue(":refreshToken", $data['refreshToken']);
+        $statement->bindValue(":union_id", $data['union_id']);
+        $statement->bindValue(":open_id", $data['open_id']);
 
+        $result = $statement->execute();
+
+        return $result;
     }
 
     /**
@@ -129,8 +139,44 @@ class paperclipDAO
             return false;
         }
     }
+
+
+    /**
+     * Only add user to table userinfo (user or users2 in test env)
+     * Used with OAuth
+     *
+     * @param $user
+     * @param $pass
+     * @param $name
+     * @param $mail
+     * @param $grps
+     * @param $verficationCode
+     * @return bool
+     */
+    public function addUserCore($user, $pass, $name, $mail, $grps, $verficationCode) {
+        try {
+            $sql = "insert into ".$this->settings['usersinfo'].
+                " (id, username, realname, mailaddr, identity, verifycode, password)
+            values
+                (null, :user, :name, :mail, :grps, :vc, null)";
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':user', $user);
+            $statement->bindValue(':name', $name);
+            $statement->bindValue(':mail', $mail);
+            $statement->bindValue(':grps', $grps);
+            $statement->bindValue(':vc', $verficationCode);
+
+            $result = $statement->execute();
+            return $result;
+        } catch (\PDOException $e) {
+            echo 'addUser';
+            echo $e->getMessage();
+            return false;
+        }
+    }
     /**
      * Add user information to database
+     * Username login only
      *
      * @param $user
      * @param $pass
@@ -145,19 +191,8 @@ class paperclipDAO
             // create the user in database
 //             "(id, username, password, realname, mailaddr, identity, verifycode)
 //            (null, :user, :pass, :name, :mail, :grps, :vc)";
-            $sql = "insert into ".$this->settings['usersinfo'].
-                " (id, username, realname, mailaddr, identity, verifycode, password)
-            values
-                (null, :user, :name, :mail, :grps, :vc, null)";
-            $statement = $this->pdo->prepare($sql);
-            $statement->bindValue(':user', $user);
-//            $statement->bindValue(':pass', $pass);
-            $statement->bindValue(':name', $name);
-            $statement->bindValue(':mail', $mail);
-            $statement->bindValue(':grps', $grps);
-            $statement->bindValue(':vc', $verficationCode);
+            $result = $this->addUserCore($user, $pass, $name, $mail, $grps, $verficationCode);
 
-            $result = $statement->execute();
             // Add user password into auth table
             $id = $this->getUserID($user);
             $addAuthResult = $this->addAuthUsername($id, $user, $pass);
