@@ -80,15 +80,12 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 
     // paperclip's own DAO
     private $dao;
-    private $redis;
     public function __construct()
     {
         $this->editperpage = $this->getConf('editperpage');
         $this->replyperpage = $this->getConf('commentperpage');
 
         $this->dao = new dokuwiki\paperclip\paperclipDAO();
-        $this->redis = new Redis();
-        $this->redis->connect('redis',6379);
         require  dirname(__FILE__).'/../settings.php';
         $dsn = "mysql:host=".$this->settings['host'].
             ";dbname=".$this->settings['dbname'].
@@ -588,7 +585,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
                         <input name='ltime' class='flatpickr' type='text' placeholder='结束时间' title='结束时间' readonly='readonly' style='cursor:pointer;' value='{$_REQUEST['ltime']}'>
                     </p>
                     <p> 
-                        <input type='radio' name='identity' value='allchecked='checked'>全部用户
+                        <input type='radio' name='identity' value='all' checked='checked'>全部用户
                         <input type='radio' name='identity' value='muted' {$mchecked}>禁言用户
                         <input type='radio' name='identity' value='nuked' {$nchecked}>拉黑用户
                     </p>
@@ -1111,7 +1108,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         if (!isset($pagenum)) {
             $pagenum = 1;
         }
-        global $ACT, $INFO, $ID;
+        global $ACT, $INFO;
 
         // Need something to check the identity here
         // Need Fix !
@@ -1124,8 +1121,6 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         }
         else {
             echo "<div class='paperclip__admin'>";
-
-            $countConditions = '';
             $getConditions = '';
             $username = $_REQUEST['username'];
             $summary = $_REQUEST['summary'];
@@ -1145,28 +1140,28 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             }
             if ($etime && $ltime) {
                 if ($getConditions) {
-                    $getConditions .= "and ".__CONDITIONS__['conTime']." >= '".$etime."' and ".__CONDITIONS__['conTime']." <= '".$ltime."' ";
+                    $getConditions .= "and ".__CONDITIONS__['conTime']." >= '{$etime}' and ".__CONDITIONS__['conTime']." <= '{$ltime}' ";
                 }else{
-                    $getConditions .= __CONDITIONS__['conTime']." >= '".$etime."' and ".__CONDITIONS__['conTime']." <= '".$ltime."' ";
+                    $getConditions .= __CONDITIONS__['conTime']." >= '{$etime}' and ".__CONDITIONS__['conTime']." <= '{$ltime}' ";
                 }
             } elseif ($etime) {
                 if ($getConditions) {
-                    $getConditions .= "and ".__CONDITIONS__['conTime']." >= '".$etime."' ";
+                    $getConditions .= "and ".__CONDITIONS__['conTime']." >= '{$etime}' ";
                 }else{
-                    $getConditions .= __CONDITIONS__['conTime']." >= '".$etime."' ";
+                    $getConditions .= __CONDITIONS__['conTime']." >= '{$etime}' ";
                 }
             } elseif ($ltime) {
                 if ($getConditions) {
-                    $getConditions .= "and ".__CONDITIONS__['conTime']." <= '".$ltime."' ";
+                    $getConditions .= "and ".__CONDITIONS__['conTime']." <= '{$ltime}' ";
                 }else{
-                    $getConditions .= __CONDITIONS__['conTime']." <= '".$ltime."' ";
+                    $getConditions .= __CONDITIONS__['conTime']." <= '{$ltime}' ";
                 }
             }
             if ($identity && $identity != 'all') {
                 if ($getConditions) {
-                    $getConditions .= "and ".__CONDITIONS__['conIdentity']." like '".$identity."' ";
+                    $getConditions .= "and ".__CONDITIONS__['conIdentity']." like '{$identity}' ";
                 }else{
-                    $getConditions .= __CONDITIONS__['conIdentity']." like '".$identity."' ";
+                    $getConditions .= __CONDITIONS__['conIdentity']." like '{$identity}' ";
                 }                    
             }
 
@@ -1179,16 +1174,16 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
                 
                 if ($summary) {
                     if ($getConditions){
-                        $getConditions .= "and ".__CONDITIONS__['conSummary']." like '%".$summary."%' ";
+                        $getConditions .= "and ".__CONDITIONS__['conSummary']." like '%{$summary}%' ";
                     }else{
-                        $getConditions .= __CONDITIONS__['conSummary']." like '%".$summary."%' ";
+                        $getConditions .= __CONDITIONS__['conSummary']." like '%{$summary}%' ";
                     }
                 }
                 if ($username) {
                     if ($getConditions) {
-                        $getConditions .= "and ".__CONDITIONS__['conEditor']." like '%".$username."%' ";
+                        $getConditions .= "and ".__CONDITIONS__['conEditor']." like '%{$username}%' ";
                     }else{
-                        $getConditions .= __CONDITIONS__['conEditor']." like '%".$username."%' ";
+                        $getConditions .= __CONDITIONS__['conEditor']." like '%{$username}%' ";
                     }
                 }
                                
@@ -1224,16 +1219,16 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 
                 if ($comment) {
                     if ($getConditions){
-                        $getConditions .= "and ".__CONDITIONS__['conComment']." like '%".$comment."%' ";
+                        $getConditions .= "and ".__CONDITIONS__['conComment']." like '%{$comment}%' ";
                     }else{
-                        $getConditions .= __CONDITIONS__['conComment']." like '%".$comment."%' ";
+                        $getConditions .= __CONDITIONS__['conComment']." like '%{$comment}%' ";
                     }
                 }
                 if ($username) {
                     if ($getConditions) {
-                        $getConditions .= "and ".__COMMENTABLEALIAS__.".".__CONDITIONS__['conUsername']." like '%".$username."%' ";
+                        $getConditions .= "and ".__COMMENTABLEALIAS__.".".__CONDITIONS__['conUsername']." like '%{$username}%' ";
                     }else{
-                        $getConditions .= __COMMENTABLEALIAS__.".".__CONDITIONS__['conUsername']." like '%".$username."%' ";
+                        $getConditions .= __COMMENTABLEALIAS__.".".__CONDITIONS__['conUsername']." like '%{$username}%' ";
                     }
                 }
                 // Get comment count and do the calculation
