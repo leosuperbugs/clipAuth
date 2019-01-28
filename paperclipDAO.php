@@ -274,7 +274,7 @@ class paperclipDAO
         try {
             $sql = 'select count(*) from '.$this->settings[$tablename];
             if ($cond) {
-                $sql .= ' where '.$cond;
+                $sql .= " where $cond";
             }
             $result = $this->pdo->query($sql);
         } catch (PDOException $e) {
@@ -320,31 +320,27 @@ class paperclipDAO
         try {
             $editlog = $this->settings['editlog'];
             $users = $this->settings['usersinfo'];
-
             $sql = "select
                     $editlog.id as editlogid,
                     $editlog.pageid,
                     $editlog.time,
                     $editlog.summary,
                     $editlog.editor,
-                    $users.realname,
-                    $users.id as editorid,
-                    $users.mailaddr,
-                    $users.identity
-            from $editlog inner join $users on $editlog.editor = $users.username";
-
+                    us.realname,
+                    us.id as editorid,
+                    us.mailaddr,
+                    us.identity
+            from $editlog inner join $users as us on $editlog.editor = us.username";
             if ($conditions) {
                 $sql .= " where $conditions";
             }
             $sql .= " order by $editlog.id DESC limit :offset ,:count";
-
             $statement = $this->pdo->prepare($sql);
             // Be careful about the data_type next time!
             $statement->bindValue(":offset", $offset, PDO::PARAM_INT);
             $statement->bindValue(":count", $countPage, PDO::PARAM_INT);
             $statement->execute();
             return $statement;
-
         } catch (PDOException $e) {
             echo $e->getMessage();
             return false;
@@ -357,21 +353,21 @@ class paperclipDAO
             $users = $this->settings['usersinfo'];
 
             $sql = "select
-                    $comment.hash,
-                    $comment.comment as summary,
-                    $comment.time,
-                    $comment.username as editor,
-                    $comment.pageid,
-                    $users.realname,
-                    $users.id as userid,
-                    $users.mailaddr,
-                    $users.identity
-                    from $comment inner join $users on $comment.username = $users.username";
+                    com.hash,
+                    com.comment as summary,
+                    com.time,
+                    com.username as editor,
+                    com.pageid,
+                    us.realname,
+                    us.id as userid,
+                    us.mailaddr,
+                    us.identity
+                    from $comment as com inner join $users as us on com.username = us.username";
 
             if ($conditions) {
                 $sql .= " where $conditions";
             }
-            $sql .= " order by $comment.time DESC limit :offset ,:count";
+            $sql .= " order by com.time DESC limit :offset ,:count";
 
             $statement = $this->pdo->prepare($sql);
             // Be careful about the data_type next time!
@@ -647,5 +643,55 @@ class paperclipDAO
         ];
     }
 
+
+    /**
+     * Count the number of EditUserinfo using conditions in $cond
+     *
+     * @param $cond
+     * @return int|mixed count result
+     */
+    public function countEditUserinfo($con) {
+        try {
+            $editlog = $this->settings['editlog'];
+            $users = $this->settings['usersinfo'];
+            $sql = "select
+                    $editlog.id from $editlog inner join $users as us on $editlog.editor = us.username";
+            if ($con) {
+                $sql .= " where $con";
+            }
+            $statement = $this->pdo->prepare($sql);
+            $statement->execute();
+            $res = $statement->fetchAll(PDO::FETCH_ASSOC);
+            return count($res);
+        } catch (PDOException $e) {
+            echo $e->getMessage();
+            return 0;
+        }
+    }
+
+    /**
+     * Count the number of CommentUserinfo using conditions in $cond
+     *
+     * @param $cond
+     * @return int|mixed count result
+     */
+    public function countCommentUserinfo($con) {
+        try {
+            $comment = $this->settings['comment'];
+            $users = $this->settings['usersinfo'];
+            $sql = "select
+                    com.id from $comment as com inner join $users as us on com.username = us.username";
+            if ($con) {
+                $sql .= " where $con";
+            }
+            $statement = $this->pdo->prepare($sql);
+            $statement->execute();
+            $res = $statement->fetchAll(PDO::FETCH_ASSOC);
+            return count($res);
+        } catch (PDOException $e) {
+            echo $e->getMessage();
+            return 0;
+        }
+    }
 
 }

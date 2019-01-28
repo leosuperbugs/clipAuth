@@ -49,6 +49,19 @@ define('__REGISTER_ORDER__', array(
 ));
 define('__MUTED__', 'muted');
 define('__NUKED__', 'nuked');
+define('__OKCODE__', 200);
+//admin search conditions field
+define('__USERTABLEALIAS__', 'us');
+define('__COMMENTABLEALIAS__', 'com');
+define('__CONDITIONS__', array(
+    'conTime' => 'time',
+    'conUsername' => 'username',
+    'conEditor' => 'editor',
+    'conUserid' => 'id',
+    'conComment' => 'comment',
+    'conSummary' => 'summary',
+    'conIdentity' => 'identity',
+));
 
 class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 {
@@ -65,14 +78,15 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 
     // paperclip's own DAO
     private $dao;
-
+    private $redis;
     public function __construct()
     {
         $this->editperpage = $this->getConf('editperpage');
         $this->replyperpage = $this->getConf('commentperpage');
 
         $this->dao = new dokuwiki\paperclip\paperclipDAO();
-
+        $this->redis = new Redis();
+        $this->redis->connect('redis',6379);
         require  dirname(__FILE__).'/../settings.php';
         $dsn = "mysql:host=".$this->settings['host'].
             ";dbname=".$this->settings['dbname'].
@@ -149,8 +163,29 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             'BEFORE',
             $this,'ajaxHandler'
         );
-
+        $controller->register_hook(
+            'JS_SCRIPT_LIST',
+            'BEFORE',
+            $this,'jsList'
+        );
+        $controller->register_hook(
+            'CSS_STYLES_INCLUDED',
+            'BEFORE',
+            $this,'cssList'
+        );
     }
+
+    public function jsList(Doku_Event $event, $param){
+        $event->data[] = DOKU_INC.'lib/plugins/clipauth/flatpicker.js';
+        $event->data[] = DOKU_INC.'lib/plugins/clipauth/zh.js';
+        $b = $event->data;
+    } 
+
+    public function cssList(Doku_Event $event, $param){
+        $path = DOKU_INC.'lib/plugins/clipauth/flatpickr.less';
+        $a = $event->data['files'][$path] = "lib/plugins/clipauth/";
+        $c = $event->data;
+    } 
 
     public function ajaxHandler(Doku_Event $event, $param)
     {
@@ -178,7 +213,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         } elseif ($_POST['call']=='clip_submit') {
             global $_REQUEST;
             $editcontent = $_REQUEST['wikitext'];
-            $res = $this->_filter($editcontent);
+            $res = $this->contentFilter($editcontent);
             if (!$res) {
                 echo 'false';
             }else{
@@ -508,6 +543,59 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             print "</div>";
 
         }
+    }
+
+    /**
+     * Print the search form of admin console
+     * $clip alledit or allcom
+     */
+    private function printAdminSearchForm($clip) {
+        global $_REQUEST;
+        $mchecked = '';
+        $nchecked = '';
+        $html = "<div id='adsearchbox'>
+                <form id='adminsearch_form' method='post' action=/doku.php?show=".__HREFSETTING__[$clip]." accept-charset='utf-8'>";
+        if ($_REQUEST['identity'] == __MUTED__)
+            $mchecked = 'checked="checked"';
+        elseif ($_REQUEST['identity'] == __NUKED__)
+            $nchecked = 'checked="checked"';
+
+        if ($clip == __CLIP__ALLEDIT__)
+            $html .= "<p>
+                        词　条：
+                        <input type='text' name='summary' value={$_REQUEST['summary']}>
+                      </p>";
+        elseif ($clip == __CLIP__ALLCOM__)
+            $html .= "<p>
+                        评　论：
+                        <input type='text' name='comment' value={$_REQUEST['comment']}>
+                      </p>";
+
+        $html .= "<p>
+                        用户名：
+                        <input type='text' name='username' value={$_REQUEST['username']}>
+                    </p>
+                    <p>
+                        用户ID：
+                        <input type='text' name='userid' value={$_REQUEST['userid']}>
+                    </p>
+                    <p>
+                        时　间：
+                        <input name='etime' class='flatpickr' type='text' placeholder='结束时间' title='结束时间' readonly='readonly' style='cursor:pointer; 'value='{$_REQUEST['etime']}'>
+                      -- 
+                        <input name='ltime' class='flatpickr' type='text' placeholder='结束时间' title='结束时间' readonly='readonly' style='cursor:pointer;' value='{$_REQUEST['ltime']}'>
+                    </p>
+                    <p> 
+                        <input type='radio' name='identity' value='allchecked='checked'>全部用户
+                        <input type='radio' name='identity' value='muted' {$mchecked}>禁言用户
+                        <input type='radio' name='identity' value='nuked' {$nchecked}>拉黑用户
+                    </p>
+                    <p>
+                        <input type='submit' name='admin_submit' value='搜索'>
+                    </p>";
+        $html .= "</form></div>";
+
+        print $html;
     }
 
     /**
@@ -1021,7 +1109,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         if (!isset($pagenum)) {
             $pagenum = 1;
         }
-        global $ACT, $INFO;
+        global $ACT, $INFO, $ID;
 
         // Need something to check the identity here
         // Need Fix !
@@ -1035,20 +1123,79 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         else {
             echo "<div class='paperclip__admin'>";
 
+            $countConditions = '';
+            $getConditions = '';
+            $username = $_REQUEST['username'];
+            $summary = $_REQUEST['summary'];
+            $comment = $_REQUEST['comment'];
+            $userid = $_REQUEST['userid'];
+            $etime = $_REQUEST['etime'];
+            $ltime = $_REQUEST['ltime'];
+            $identity = $_REQUEST['identity'];
+            //search conditions
+            
+            if ($userid) {
+                if ($getConditions) {
+                    $getConditions .= "and ".__USERTABLEALIAS__.".".__CONDITIONS__['conUserid']." = $userid ";
+                }else{
+                    $getConditions .= __USERTABLEALIAS__.".".__CONDITIONS__['conUserid']." = $userid ";
+                }
+            }
+            if ($etime && $ltime) {
+                if ($getConditions) {
+                    $getConditions .= "and ".__CONDITIONS__['conTime']." >= '".$etime."' and ".__CONDITIONS__['conTime']." <= '".$ltime."' ";
+                }else{
+                    $getConditions .= __CONDITIONS__['conTime']." >= '".$etime."' and ".__CONDITIONS__['conTime']." <= '".$ltime."' ";
+                }
+            } elseif ($etime) {
+                if ($getConditions) {
+                    $getConditions .= "and ".__CONDITIONS__['conTime']." >= '".$etime."' ";
+                }else{
+                    $getConditions .= __CONDITIONS__['conTime']." >= '".$etime."' ";
+                }
+            } elseif ($ltime) {
+                if ($getConditions) {
+                    $getConditions .= "and ".__CONDITIONS__['conTime']." <= '".$ltime."' ";
+                }else{
+                    $getConditions .= __CONDITIONS__['conTime']." <= '".$ltime."' ";
+                }
+            }
+            if ($identity && $identity != 'all') {
+                if ($getConditions) {
+                    $getConditions .= "and ".__CONDITIONS__['conIdentity']." like '".$identity."' ";
+                }else{
+                    $getConditions .= __CONDITIONS__['conIdentity']." like '".$identity."' ";
+                }                    
+            }
+
             if ($show === 'alledit'){
+                
                 // Showing the edit history for admins
                 // For admins only, show full edit history
                 $this->printAdminHeader(__CLIP__ALLEDIT__);
-
-                // Get editlog count and do the calculation
-                $countFullEditlog = $this->dao->countRow('','editlog');
+                $this->printAdminSearchForm(__CLIP__ALLEDIT__);
+                
+                if ($summary) {
+                    if ($getConditions){
+                        $getConditions .= "and ".__CONDITIONS__['conSummary']." like '%".$summary."%' ";
+                    }else{
+                        $getConditions .= __CONDITIONS__['conSummary']." like '%".$summary."%' ";
+                    }
+                }
+                if ($username) {
+                    if ($getConditions) {
+                        $getConditions .= "and ".__CONDITIONS__['conEditor']." like '%".$username."%' ";
+                    }else{
+                        $getConditions .= __CONDITIONS__['conEditor']." like '%".$username."%' ";
+                    }
+                }
+                               
+                $countFullEditlog = $this->dao->countEditUserInfo($getConditions);
                 $pagenum = $this->checkPagenum($pagenum, $countFullEditlog, '');
                 $offset = ($pagenum - 1) * $this->editperpage;
                 $countPage = $this->editperpage;
                 $countPage = $this->roundLimit($countPage, $countFullEditlog, $offset);
-
-                $statement = $this->dao->getEditlogWithUserInfo($offset, $countPage);
-
+                $statement = $this->dao->getEditlogWithUserInfo($offset, $countPage ,$getConditions);
                 while (($result = $statement->fetch(PDO::FETCH_ASSOC)) !== false) {
                     // Processing the result of editlog, generating a row of log
                     $this->adminEditUnit($result);
@@ -1057,22 +1204,44 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
                 if ($statement->rowCount() === 0) {
                     echo '<br>还没有编辑记录<br>';
                 }
-
                 $sum = ceil($countFullEditlog / $this->editperpage);
-                $this->paginationNumber($sum, $pagenum, 'alledit');
+                $additionalParam = array(
+                    'summary' => $summary,
+                    'username' => $username,
+                    'userid' => $userid,
+                    'etime' => $etime,
+                    'ltime' => $ltime,
+                    'identity' => $identity
+                ); 
+                $this->paginationNumber($sum, $pagenum, 'alledit', $additionalParam);
 
             } else if ($show === 'allcom') {
                 // Showing the comment history for admins
                 $this->printAdminHeader(__CLIP__ALLCOM__);
+                $this->printAdminSearchForm(__CLIP__ALLCOM__);
 
+                if ($comment) {
+                    if ($getConditions){
+                        $getConditions .= "and ".__CONDITIONS__['conComment']." like '%".$comment."%' ";
+                    }else{
+                        $getConditions .= __CONDITIONS__['conComment']." like '%".$comment."%' ";
+                    }
+                }
+                if ($username) {
+                    if ($getConditions) {
+                        $getConditions .= "and ".__COMMENTABLEALIAS__.".".__CONDITIONS__['conUsername']." like '%".$username."%' ";
+                    }else{
+                        $getConditions .= __COMMENTABLEALIAS__.".".__CONDITIONS__['conUsername']." like '%".$username."%' ";
+                    }
+                }
                 // Get comment count and do the calculation
-                $countFullEditlog = $this->dao->countRow('', 'comment');
+                $countFullEditlog = $this->dao->countCommentUserinfo($getConditions, 'comment');
                 $pagenum = $this->checkPagenum($pagenum, $countFullEditlog, '');
                 $offset = ($pagenum - 1) * $this->editperpage;
                 $countPage = $this->editperpage;
                 $countPage = $this->roundLimit($countPage, $countFullEditlog, $offset);
 
-                $statement = $this->dao->getCommentWithUserInfo($offset, $countPage);
+                $statement = $this->dao->getCommentWithUserInfo($offset, $countPage, $getConditions);
 
 
                 while (($result = $statement->fetch(PDO::FETCH_ASSOC)) !== false) {
@@ -1085,7 +1254,15 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
                 }
 
                 $sum = ceil($countFullEditlog / $this->editperpage);
-                $this->paginationNumber($sum, $pagenum, 'allcom');
+                $additionalParam = array(
+                    'comment' => $comment,
+                    'username' => $username,
+                    'userid' => $userid,
+                    'etime' => $etime,
+                    'ltime' => $ltime,
+                    'identity' => $identity
+                ); 
+                $this->paginationNumber($sum, $pagenum, 'allcom', $additionalParam);
 
             }
 
@@ -1212,11 +1389,11 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
      *
      * @return bool
      */
-    protected function _filter($edit){
+    protected function contentFilter($edit){
         date_default_timezone_set("PRC");
         $ak = parse_ini_file(dirname(__FILE__)."/../aliyun.ak.ini");
-        $iClientProfile = DefaultProfile::getProfile("cn-shanghai", $ak["accessKeyId"], $ak["accessKeySecret"]); // TODO
-        DefaultProfile::addEndpoint("cn-shanghai", "cn-shanghai", "Green", "green.cn-shanghai.aliyuncs.com");
+        $iClientProfile = DefaultProfile::getProfile($this->getConf('aliregion'), $ak["accessKeyId"], $ak["accessKeySecret"]); // TODO
+        DefaultProfile::addEndpoint($this->getConf('aliregion'), $this->getConf('aliregion'), $this->getConf('alido'), $this->getConf('aliFilterUrl'));
         $client = new DefaultAcsClient($iClientProfile);
         $request = new Green\TextScanRequest();
         $request->setMethod("POST");
@@ -1229,10 +1406,10 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             "scenes" => array("antispam"))));
         try {
             $response = $client->getAcsResponse($request);
-            if(200 == $response->code){
+            if(__OKCODE__ == $response->code){
                 $taskResults = $response->data;
                 foreach ($taskResults as $taskResult) {
-                    if(200 == $taskResult->code){
+                    if(__OKCODE__ == $taskResult->code){
                         $sceneResults = $taskResult->results;
                         foreach ($sceneResults as $sceneResult) {
                             $scene = $sceneResult->scene;
