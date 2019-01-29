@@ -8,15 +8,9 @@ jQuery( document ).ready(function($) {
             fail(function () {swal("操作失败", "请检查网络连接并重试", "error")});
             ev.preventDefault();
         });
-    // $("#dw__register input[name='invitationCode']").on('change', function (ev) {
-    //         console.log('invt code ajax');
-    //         $.post('/lib/exe/ajax.php', {invtCode: this, call: 'code'}).
-    //         done(function () {swal("测试成功", "。。", 'success')}).
-    //         fail(function () {swal("测试失败", "..", 'error')});
-    //         ev.preventDefault();
-    //     });
-    $("#dw__editform")
-        .submit(
+    
+    var form = $("#dw__editform");
+    $("#edbtn__save").click(
         function (ev) {
             var res = '';
             $.ajax({
@@ -24,7 +18,7 @@ jQuery( document ).ready(function($) {
                 async: false,
                 dataType:'text',
                 type:"POST",
-                data: $(this).serialize(),
+                data: form.serialize(),
                 success:function(msg){
                     var reg = /true/;
                     res = msg.match(reg);                    
@@ -33,6 +27,8 @@ jQuery( document ).ready(function($) {
         if(!res){ 
             swal('编辑失败', "评论含有敏感词", "error");
             return false; 
+        }else{
+            $("#dw__editform").submit();
         }
     });
 
