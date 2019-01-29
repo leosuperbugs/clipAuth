@@ -90,18 +90,18 @@ class paperclipDAO
     }
 
     public function addAuthOAuth($data, $third_party) {
-        $id = $this->getUserID($data['username']);
+        $id = $this->getUserID($data['open_id']);
         $sql = "insert into {$this->settings['auth_oauth']} (
                     id, username, third_party, credential, 
                     refresh_token, union_id, open_id, create_time, refresh_time)
                 values (
                     :id, :username, :third_party, :accessToken, 
-                    :refreshToken, union_id, open_id, null, null)";
+                    :refreshToken, :union_id, :open_id, null, null)";
 
         $statement = $this->pdo->prepare($sql);
 
-        $statement->bindValue(":id", $id);
-        $statement->bindValue(":username", $data['username']);
+        $statement->bindValue(":id", $id, PDO::PARAM_INT);
+        $statement->bindValue(":username", $data['open_id']);
         $statement->bindValue(":third_party", $third_party);
         $statement->bindValue(":accessToken", $data['accessToken']);
         $statement->bindValue(":refreshToken", $data['refreshToken']);
@@ -121,7 +121,7 @@ class paperclipDAO
      */
     public function getOAuthUserByOpenid($third_party, $openid) {
         try {
-            $sql = "select username from {$this->settings['auth_oauth']} where third_party=:third_party and openid=:openid";
+            $sql = "select username from {$this->settings['auth_oauth']} where third_party=:third_party and open_id=:openid";
             $statement = $this->pdo->prepare($sql);
             $statement->bindValue(':third_party', $third_party);
             $statement->bindValue(':openid', $openid);
@@ -301,7 +301,40 @@ class paperclipDAO
     }
 
     /**
+     * Only select data from userinfo (users)
+     * @param $user
+     * @return array|bool
+     */
+    public function getUserDataCore($user) {
+        $userinfo = $this->settings['usersinfo'];
+
+        $sql = "select 
+                id,
+                username,
+                realname,
+                mailaddr,
+                identity
+                from $userinfo 
+                where username = :username";
+
+        $statement = $this->pdo->prepare($sql);
+        $statement->bindValue(':username', $user);
+        $statement->execute();
+
+        $result = $statement->fetch(PDO::FETCH_ASSOC);
+//        $result['password'] = $this->getUserPassword($user);
+
+        if ($result == false) {
+            return false;
+        }
+
+        $userinfo = $this->transferResult($result);
+        return $userinfo;
+    }
+
+    /**
      * Get user info from username
+     * With PASSWORD
      *
      * @param $user
      * @return bool
@@ -310,9 +343,6 @@ class paperclipDAO
         $userinfo = $this->settings['usersinfo'];
         $authUsername = $this->settings['auth_username'];
 
-        // should use left join here maybe?
-        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!111
-        // Changes needed
         $sql = "select 
                 $userinfo.id,
                 $userinfo.username,
@@ -337,6 +367,7 @@ class paperclipDAO
         }
 
         $userinfo = $this->transferResult($result);
+        $userinfo['pass'] = $result['password'];
 
         return $userinfo;
     }
@@ -375,6 +406,7 @@ class paperclipDAO
         $name = $result['username'];
         $userinfo = $this->transferResult($result);
         $userinfo['user'] = $name;
+        $userinfo['pass'] = $result['password'];
 
         return $userinfo;
     }
@@ -846,7 +878,7 @@ class paperclipDAO
      */
     private  function  transferResult ($result) {
         return [
-            'pass' => $result['password'],
+//            'pass' => $result['password'],
             'name' => $result['realname'],
             'mail' => $result['mailaddr'],
             'id'   => $result['id'],

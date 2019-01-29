@@ -102,12 +102,10 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
             $auth = base64_decode($auth, true);
             $servicename = base64_decode($servicename, true);
 
-            // UNFINISHED
-            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            // First we check the user here
-            // Then we return user info to dokuwiki
-            if ($this->dao->getUserData($user))
-            return true;
+            if ($USERINFO = $this->dao->getUserDataCore($cookieuser)) {
+                $_SERVER['REMOTE_USER'] = $USERINFO['name'];
+                return $USERINFO;
+            }
         }
 
         if (empty($user)) {
@@ -143,14 +141,20 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
                     $authOAuthData['open_id'] = $values['openid'];
                     $authOAuthData['union_id'] = $values['unionid'];
 
-                    $username = '';
+//                    $username = '';
                     // Check if user have already registered
                     if ($username = $this->dao->getOAuthUserByOpenid($this->getConf('wechat'), $values['openid'])) {
-                        // Do some thing?
+                        // Set user info
+                        $USERINFO = $this->dao->getUserDataCore($authOAuthData['open_id']);
+                        $realname = $USERINFO['name'];
+
+                        $_SERVER['REMOTE_USER'] = $realname;
+                        $this->setUserCookie($authOAuthData['open_id'], $sticky, $this->getConf('wechat'));
+
 
                     }
-                    // Then use dao to save user data
                     else {
+                        // Not registered
                         // get user info
                         $userinfo = $hlp->getWechatInfo($authOAuthData['accessToken'], $values['openid']);
                         $authOAuthData['username'] = $userinfo['nickname'];
@@ -161,7 +165,7 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
                         $grps = join(',', $grps);
 
                         // this function is not finished
-                        $this->dao->addUserCore(
+                        $addUserCoreResult = $this->dao->addUserCore(
                             $authOAuthData['open_id'],
                             null,
                             $authOAuthData['username'],
@@ -169,10 +173,11 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
                             $grps,
                             null
                         );
-                        $this->dao->addAuthOAuth($authOAuthData, $this->getConf('wechat'));
+                        $addAuthOAuthResult = $this->dao->addAuthOAuth($authOAuthData, $this->getConf('wechat'));
+
+                        // Set cookies
+                        $this->setUserCookie($authOAuthData['open_id'], $sticky, $this->getConf('wechat'));
                     }
-                    // Log user in here
-                    $this->setUserCookie($username, $sticky, $this->getConf('wechat'));
 
                     return true;
 
@@ -182,12 +187,8 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
 
                 }
             }
-        } else {
-            return auth_login($user, $pass, $sticky);
         }
-
-
-//        return true;
+        return auth_login($user, $pass, $sticky);
     }
 
     private function isInPrison($record) {
