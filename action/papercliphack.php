@@ -177,7 +177,6 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     public function jsList(Doku_Event $event, $param){
         $event->data[] = DOKU_INC.'lib/plugins/clipauth/flatpicker.js';
         $event->data[] = DOKU_INC.'lib/plugins/clipauth/zh.js';
-        $b = $event->data;
     } 
 
     public function cssList(Doku_Event $event, $param){
