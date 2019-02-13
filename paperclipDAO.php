@@ -334,16 +334,16 @@ class paperclipDAO
 
     /**
      * Get user info from username
-     * With PASSWORD
      *
      * @param $user
      * @return bool
      */
-    public function getUserData($user) {
-        $userinfo = $this->settings['usersinfo'];
-        $authUsername = $this->settings['auth_username'];
+    public function getUserData($user, $isPassNeeded=true) {
+        if ($isPassNeeded) {
+            $userinfo = $this->settings['usersinfo'];
+            $authUsername = $this->settings['auth_username'];
 
-        $sql = "select 
+            $sql = "select 
                 $userinfo.id,
                 $userinfo.username,
                 $userinfo.realname,
@@ -355,21 +355,24 @@ class paperclipDAO
                 inner join $authUsername on $userinfo.id = $authUsername.id
                 where $userinfo.username = :username";
 
-        $statement = $this->pdo->prepare($sql);
-        $statement->bindValue(':username', $user);
-        $statement->execute();
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':username', $user);
+            $statement->execute();
 
-        $result = $statement->fetch(PDO::FETCH_ASSOC);
+            $result = $statement->fetch(PDO::FETCH_ASSOC);
 //        $result['password'] = $this->getUserPassword($user);
 
-        if ($result == false) {
-            return false;
+            if ($result == false) {
+                return false;
+            }
+
+            $userinfo = $this->transferResult($result);
+            $userinfo['pass'] = $result['password'];
+
+            return $userinfo;
+        } else {
+            return $this->getUserDataCore($user);
         }
-
-        $userinfo = $this->transferResult($result);
-        $userinfo['pass'] = $result['password'];
-
-        return $userinfo;
     }
 
     /**

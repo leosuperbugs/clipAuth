@@ -75,7 +75,7 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
         $_SESSION[DOKU_COOKIE]['auth']['user'] = $user;
 //                    $_SESSION[DOKU_COOKIE]['auth']['pass'] = $pass;
         $_SESSION[DOKU_COOKIE]['auth']['info'] = $USERINFO;
-        $USERINFO = $auth->getUserData($user);
+        $USERINFO = $this->dao->getUserDataCore($user);
     }
 
     /**
@@ -263,8 +263,6 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
                     $this->dao->setUserIdentity($userinfo['id'], $prevID);
                     $userinfo = $this->getUserData($user);
                 }
-
-
             }
 
             if ($userinfo !== false) {
