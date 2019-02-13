@@ -34,4 +34,16 @@ jQuery( document ).ready(function($) {
 
     $("#dw__editform").css("display","block");
     $(".toolbar").css("display","block");
+
+
+    $("#adsearchbox").find('p').css("margin-bottom","0.5rem");
+    $("#adminsearch_form").find('input[type=radio]').change(function(){
+        $("#adminsearch_form").submit();
+    });
+    
+    $(".flatpickr" ).flatpickr({
+        "locale": "zh",
+        enableTime: true,
+        dateFormat: "Y-m-d H:i",
+    });
 });
