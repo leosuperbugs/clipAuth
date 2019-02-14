@@ -8,6 +8,8 @@
 @titlefont :3rem;
 @barspacing :2.292rem;
 @top_bottom_distance :6.667rem;
+@inputwidth: 30vw;
+
 
 .paperclip__selfinfo {
   padding: 6 * @clipunit 8vw 0;
@@ -291,6 +293,46 @@
   }
 }
 
+@extlink_mginlft: 2rem;
+@extlink_pdin: 0.5rem;
+
+.paperclip__login{
+
+  .paperclip__extlogin {
+    margin-top: 2rem;
+    text-align: center;
+
+    .paperclip__extlgintitle {
+      display: inline-block;
+      font-weight: lighter;
+    }
+
+    .paperclip__divhr {
+      display: inline-block;
+      width: @inputwidth;
+      border-bottom: 1px solid white;
+    }
+
+    .paperclip__extlkgrp {
+      margin-top: 1rem;
+
+      .paperclip__extlink {
+        padding: @extlink_pdin @extlink_pdin @extlink_pdin @extlink_mginlft;
+        border-radius: 10px;
+        font-size: 1.2rem;
+      }
+    }
+
+    #extlink__wechat {
+      background: __paperclip__darkgrey__ url("/lib/plugins/clipauth/img/wechat_bw.png") no-repeat left center;
+      background-size: @extlink_mginlft @extlink_mginlft;
+    }
+    #extlink__weibo {
+      background: __paperclip__darkgrey__ url("/lib/plugins/clipauth/img/weibo_bw.png") no-repeat left center;
+      background-size: @extlink_mginlft @extlink_mginlft;
+    }
+  }
+}
 
 
 .dokuwiki .search-results-form fieldset.search-form button.toggleAssistant {

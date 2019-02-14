@@ -7,4 +7,5 @@
 .idea/*
 settings.php
 _test/
+*.DS_STORE
 aliyun.ak.ini

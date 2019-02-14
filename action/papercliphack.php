@@ -16,6 +16,8 @@ use \dokuwiki\paperclip;
 use Caxy\HtmlDiff\HtmlDiff;
 
 include dirname(__FILE__).'/../paperclipDAO.php';
+include dirname(__FILE__).'/../paperclipCache.php';
+//include dirname(__FILE__).'/../helper/paperclipHelper.php';
 
 
 // must be run within Dokuwiki
@@ -94,7 +96,7 @@ define('__TOOLBAR__STATE__', array(
 ));
 class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 {
-    private $pdo;
+//    private $pdo;
     private $settings;
     // Some constants relating to the pagination of personal centre
     private $editperpage;
@@ -148,6 +150,11 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             'handle_action_act_preprocess'
         );
         $controller->register_hook(
+            'ACTION_ACT_PREPROCESS',
+            'BEFORE', $this,
+            'handle_extlogin_redirect'
+        );
+        $controller->register_hook(
             'COMMON_WIKIPAGE_SAVE',
             'AFTER', $this,
             'handle_common_wikipage_save'
@@ -194,6 +201,11 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             'AJAX_CALL_UNKNOWN',
             'BEFORE',
             $this,'ajaxHandler'
+        );
+        $controller->register_hook(
+            'HTML_LOGINFORM_OUTPUT',
+            'BEFORE',
+            $this, 'login_form_handler'
         );
         $controller->register_hook(
             'JS_SCRIPT_LIST',
@@ -977,7 +989,6 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 
     }
 
-
     /**
      *
      * Display the content of page fulltext search result
@@ -1015,7 +1026,6 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         $this->paginationNumber($sum, $pagenum, 'fulltext', array('q' => $QUERY));
     }
 
-
     /**
      * Get a form which can be used to adjust/refine the search
      *
@@ -1048,7 +1058,6 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 
         return $searchForm->toHTML();
     }
-
 
     /**
      * Show the search result in two sections
@@ -1173,9 +1182,6 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         print "</div>";
     }
 
-
-
-
     /**
      * A wrapper of checking if the action is to admin the site
      * !!! NOT FOR IDENTITY!!
@@ -1187,7 +1193,6 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     private function isAdmin($show, $ACT) {
         return ($show === 'alledit' || $show === 'allcom' || $show === 'admin');
     }
-
 
     private function showAdminContent() {
         $show = $_GET['show'];
@@ -1422,19 +1427,19 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             $this->showAdminContent();
         }
     }
-    public function handle_html_registerform_output(Doku_Event $event, $param)
-    {
-    }
-    public function handle_html_loginform_output(Doku_Event $event, $param)
-    {
-    }
-    public function handle_html_updateprofileform_output(Doku_Event $event, $param)
-    {
-    }
+
     public function changeLink(Doku_Event &$event, $param)
     {
         if($event->data['view'] != 'user') return;
     }
+
+    /**
+     * Author: Max Qian
+     * Used to handle the mail verification
+     *
+     * @param Doku_Event $event
+     * @param $param
+     */
     public function handle_action_act_preprocess(Doku_Event $event, $param)
     {
       global $_GET;
@@ -1474,8 +1479,28 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
           header('Location: doku.php');
         }
       }
+    }
 
+    private function externalLoginUI() {
+        // Make up the link
+        $hlp = $this->loadHelper('clipauth_paperclipHelper');
 
+        $wechatLink = $hlp->getAuthURL();
+
+            return "
+    <div class='paperclip__extlogin'>
+        <div class='paperclip__exthead'>
+            <div class='paperclip__extlgintitle'>
+             {$this->getLang('extlogin')}
+            </div> 
+        </div>
+        <div>
+            <div class='paperclip__divhr'></div>
+        </div>
+        <div class='paperclip__extlkgrp'>
+            <a class='paperclip__extlink' target='_blank' id='extlink__wechat' href={$wechatLink}>{$this->getLang('wechatlogin')}</a>
+        </div>
+    </div>";
     }
 
     /**
@@ -1495,7 +1520,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         $task1 = array('dataId' =>  uniqid(),
             'content' => $edit
         );
-        
+
         $request->setContent(json_encode(array("tasks" => array($task1),
             "scenes" => array("antispam"))));
         try {
@@ -1523,4 +1548,12 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         }
     }
 
+    public function login_form_handler(Doku_Event $event, $param) {
+        $externalLoginUI = $this->externalLoginUI();
+        $event->data->_content[] = $externalLoginUI;
+    }
+
+    public function handle_extlogin_redirect(Doku_Event $event, $param) {
+
+    }
 }

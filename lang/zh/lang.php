@@ -25,3 +25,7 @@ $lang['process'] = '处理';
 $lang['cantban'] = '不能禁言管理员';
 $lang['editheader'] = '词条编辑';
 $lang['editindex'] = '索引';
+$lang['extlogin'] = '第三方登录';
+$lang['wechatlogin'] = '微信登录';
+$lang['weibologin'] = '微博登录';
+
