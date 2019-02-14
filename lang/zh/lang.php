@@ -23,3 +23,5 @@ $lang['userIdentity'] = '用户状态：';
 $lang['edited'] = '编辑了';
 $lang['process'] = '处理';
 $lang['cantban'] = '不能禁言管理员';
+$lang['editheader'] = '词条编辑';
+$lang['editindex'] = '索引';
