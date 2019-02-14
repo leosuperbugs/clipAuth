@@ -227,8 +227,6 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         unset($event->data[15]);
         unset($event->data[16]);
         unset($event->data[17]);
-        $a = $event->data;
-        $b = $a;
     } 
 
     public function jsList(Doku_Event $event, $param){
