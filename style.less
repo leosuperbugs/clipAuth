@@ -1,6 +1,9 @@
 @clipunit :1rem;
 @errormsg :#fcc;
-
+@clipgray :#777777;
+@clipblack :#282828;
+@borderline :#C9C9C9;
+@clipwhite :#fff;
 .paperclip__selfinfo {
   padding: 6 * @clipunit 8vw 0;
   min-height: 90vh;
@@ -322,3 +325,192 @@ noscript {
       background-color: transparent;
 }
 
+.dokuwiki .paperclip__edit__header {
+  margin-top: 6.667rem;
+  color: @clipblack;
+  font-size: 3rem;
+  .paperclip__editlog__index {
+    font-size: 0.883rem;
+    margin-top: 1.4rem;
+    margin-bottom: 1.25rem;
+  }
+}
+blockquote {
+  color: @clipgray;
+}
+.paperclip__edittitle {
+  margin-top: 3.333rem;
+  margin-bottom: 2rem;
+  font-size: 3rem;
+  font-family: -apple-system,BlinkMacSystemFont,Helvetica Neue,PingFang SC,Microsoft YaHei,Source Han Sans SC,Noto Sans CJK SC,WenQuanYi Micro Hei,sans-serif;
+  font-weight: bold;
+}
+
+.mode_edit {
+  .toolbutton {
+    background-color: @clipwhite;
+    border: none;
+    margin-left: 4.6rem;
+    img {
+      height: 0.883rem;
+    }
+  }
+  .toolbar {
+    border-top: 0.167rem solid @borderline;
+    border-bottom: 0.0883rem solid @borderline;
+  }
+  .tool__bar {
+    margin-left: -2.5rem;
+    margin-bottom: 1.625rem;
+    margin-top: 1.583rem;
+  }
+  #wiki__text {
+    font-size: 1rem;
+    border: none;
+    resize: none;
+    outline: none;
+    overflow: hidden;
+    line-height: 1.667rem;
+  }
+  .editBar {
+    padding-top: 2.292rem;
+    border-top: 0.0883rem solid @borderline;
+    margin-top: 0.948rem;
+  }
+  #dw__editform {
+    margin-top: 1.958rem;
+  }
+  .editButtons {
+    margin-left: 3.335rem;
+    margin-top: 2.292rem;
+  }
+  .summary {
+    margin-top: 2.292rem;
+    margin-left: 1.569rem;
+  }
+  #size__ctl {
+    display: none;
+  }
+  button[type=submit] {
+    margin-right: 3.175rem;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    border: none;
+    text-decoration: underline;
+    color: __paperclip__gold__;
+    background-color: transparent;
+  }
+  input[id=minoredit] {
+    margin-left: 4.26rem;
+    width: 0.6875rem;
+    height: 0.6875rem;
+    background-color: @clipwhite;
+    -webkit-appearance:none;
+    border: 0.0625rem solid @borderline;
+    border-radius: 0.125rem;
+    outline: none;
+  }
+  input[id=minoredit]:checked {
+    background: url("/lib/plugins/clipauth/images/right.jpg")no-repeat center;
+  }
+  input[id=edit__summary] {
+    width: 16rem;
+    border: none;
+    outline: none;
+    border-bottom: 0.0283rem solid @clipblack;
+  }
+  .license {
+    margin-top: 4rem;
+    margin-bottom: 6.667rem;
+    color: @clipgray;
+    a {
+      color: __paperclip__gold__;
+    }
+  }
+}
+.mode_preview {
+  .toolbutton {
+    background-color: white;
+    border: none;
+  }
+  .toolbar {
+    border-top: 0.167rem solid @borderline;
+    border-bottom: 0.0883rem solid @borderline;
+  }
+  .tool__bar {
+    margin-left: -2.5rem;
+    margin-bottom: 1.625rem;
+    margin-top: 1.583rem;
+  }
+  .toolbutton {
+    margin-left: 5rem;
+    img {
+      height: 0.883rem;
+    }
+  }
+  #wiki__text {
+    font-size: 1rem;
+    border: none;
+    resize: none;
+    outline: none;
+    overflow: hidden;
+    line-height: 1.667rem;
+  }
+  .editBar {
+    padding-top: 2.292rem;
+    border-top: 0.0883rem solid @borderline;
+    margin-top: 0.948rem;
+  }
+  #dw__editform {
+    margin-top: 1.958rem;
+  }
+  .editButtons {
+    margin-left: 3.335rem;
+    margin-top: 2.292rem;
+  }
+  .summary {
+    margin-top: 2.292rem;
+    margin-left: 1.569rem;
+  }
+  #size__ctl {
+    display: none;
+  }
+  button[type=submit] {
+    margin-right: 3.175rem;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    border: none;
+    text-decoration: underline;
+    color: __paperclip__gold__;
+    background-color: transparent;
+  }
+  input[id=minoredit] {
+    margin-left: 4.26rem;
+    width: 0.6875rem;
+    height: 0.6875rem;
+    background-color: @clipwhite;
+    -webkit-appearance:none;
+    border: 0.0625rem solid @borderline;
+    border-radius: 0.125rem;
+    outline: none;
+  }
+  input[id=minoredit]:checked {
+    background: url("/lib/plugins/clipauth/images/right.jpg")no-repeat center;
+  }
+  input[id=edit__summary] {
+    width: 16rem;
+    border: none;
+    outline: none;
+    border-bottom: 0.0283rem solid @clipblack;
+  }
+  .license {
+    margin-top: 4rem;
+    margin-bottom: 2rem;
+    color: @clipgray;
+    a {
+      color: __paperclip__gold__;
+    }
+  }
+}

@@ -172,7 +172,64 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             'BEFORE',
             $this,'cssList'
         );
+        $controller->register_hook(
+            'TOOLBAR_DEFINE',
+            'AFTER',
+            $this,'toolbarlist',
+            array()
+        );
+        $controller->register_hook(
+            'JS_CACHE_USE',
+            'BEFORE',
+            $this,'jshandler'
+        );
     }
+    public function jshandler(Doku_Event $event, $param){
+        $event->preventDefault();
+    }
+    public function toolbarlist(Doku_Event $event, $param){
+        $innerlink = array();
+        $outlink = array();
+        $innerlink = $event->data[9];
+        $outlink = $event->data[10];
+        $event->data[1]['icon'] = '/lib/plugins/clipauth/images/italic.png';
+        $event->data[3]['icon'] = '/lib/plugins/clipauth/images/yinyong.png';
+        $event->data[3] = array(
+            'type'   => 'format',
+            'title'  => '引用',
+            'icon'   => '/lib/plugins/clipauth/images/yinyong.png',
+            'open'   => '>',
+            'close'   => '',
+            'block'  => true
+        );
+        $event->data[4] = $event->data[8]['list'][0];
+        $event->data[4]['icon'] = '/lib/plugins/clipauth/images/h1.png';
+        $event->data[5] = $event->data[8]['list'][1];
+        $event->data[5]['icon'] = '/lib/plugins/clipauth/images/h2.png';
+        $event->data[6] = $event->data[8]['list'][2];
+        $event->data[6]['icon'] = '/lib/plugins/clipauth/images/h3.png';
+        $event->data[7] = $event->data[11];
+        $event->data[7]['icon'] = '/lib/plugins/clipauth/images/numberlist.png';
+        $event->data[8] = $event->data[12];
+        $event->data[8]['icon'] = '/lib/plugins/clipauth/images/nonelist.png';
+        $event->data[9] = $event->data[14];
+        $event->data[9]['icon'] = '/lib/plugins/clipauth/images/pic.png';
+        $event->data[10] = $innerlink;
+        $event->data[10]['icon'] = '/lib/plugins/clipauth/images/innerlink.png';
+        $event->data[11] = $outlink;
+        $event->data[11]['icon'] = '/lib/plugins/clipauth/images/outlink.png';
+        $event->data[12] = $event->data[16];
+        $event->data[12]['icon'] = '/lib/plugins/clipauth/images/chars.png';
+        unset($event->data[0]);
+        unset($event->data[2]);
+        unset($event->data[13]);
+        unset($event->data[14]);
+        unset($event->data[15]);
+        unset($event->data[16]);
+        unset($event->data[17]);
+        $a = $event->data;
+        $b = $a;
+    } 
 
     public function jsList(Doku_Event $event, $param){
         $event->data[] = DOKU_INC.'lib/plugins/clipauth/flatpicker.js';
@@ -1273,12 +1330,27 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     public function handle_tpl_content_display(Doku_Event $event, $param)
     {
         // Dispatch the customized behavior based on _GET
-        global $_GET, $ACT;
+        global $_GET, $ACT, $ID;
         $show = $_GET['show'];
         global $USERINFO, $conf, $QUERY, $INFO;
         $username = $INFO['client'];
         $pagenum = $_GET['page'];
 
+        if ($ACT == 'edit' || $ACT == 'preview') {
+            $indexForShow = '';
+            $this->processPageID($ID, $indexForShow);
+            $indexArr = explode(':', $ID);
+            $title = $indexArr[count($indexArr)-1];
+            print "<div class='paperclip__edit__header'>词条编辑
+                        <div class='paperclip__editlog__index'>
+                            索引：<span class='paperclip__link'>$indexForShow</span>
+                        </div>
+                    </div>
+                    <div class='paperclip__edittitle'>$title
+                    </div>
+
+                    ";
+        }
         if ($show === 'editlog') {
             $event->data = '';
             // A little bit wired here, need fix
