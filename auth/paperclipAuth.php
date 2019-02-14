@@ -124,12 +124,12 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
                     // Varify the session
                     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                     // Should be enabled in the future
-//                if (empty($_GET['state']) || ($_GET['state'] !== rtrim($_SESSION['oauth2state'], '#wechat_redirect'))) {
-//
-//                    unset($_SESSION['oauth2state']);
-//                    exit('Invalid state');
-//
-//                }
+                if (empty($_GET['state']) || ($_GET['state'] !== rtrim($_SESSION['oauth2state'], '#wechat_redirect'))) {
+
+                    unset($_SESSION['oauth2state']);
+                    exit('Invalid state');
+
+                }
 
                     // Get user data from wechat
                     // First, get access token from code

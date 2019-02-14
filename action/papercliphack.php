@@ -1188,7 +1188,6 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         </div>
         <div class='paperclip__extlkgrp'>
             <a class='paperclip__extlink' target='_blank' id='extlink__wechat' href={$wechatLink}>{$this->getLang('wechatlogin')}</a>
-            <a class='paperclip__extlink' target='_blank' id='extlink__weibo' href='{$this->getConf('weibolink')}'>{$this->getLang('weibologin')}</a>
         </div>
     </div>";
     }
