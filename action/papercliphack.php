@@ -143,7 +143,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
      * @return void
      */
     public function register(Doku_Event_Handler $controller)
-    {
+    {   
         $controller->register_hook(
             'ACTION_ACT_PREPROCESS',
             'BEFORE', $this,
@@ -1486,6 +1486,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         $hlp = $this->loadHelper('clipauth_paperclipHelper');
 
         $wechatLink = $hlp->getAuthURL();
+        $weiboLink = $hlp->getWeiBoUrl();
 
             return "
     <div class='paperclip__extlogin'>
@@ -1499,6 +1500,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         </div>
         <div class='paperclip__extlkgrp'>
             <a class='paperclip__extlink' target='_blank' id='extlink__wechat' href={$wechatLink}>{$this->getLang('wechatlogin')}</a>
+            <a class='paperclip__extlink' target='_blank' id='extlink__weibo' href={$weiboLink}>{$this->getLang('weibologin')}</a>
         </div>
     </div>";
     }

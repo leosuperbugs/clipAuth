@@ -41,6 +41,11 @@ class helper_plugin_clipauth_paperclipHelper extends DokuWiki_Plugin {
             'secret' => $this->getConf('wechatSecret'),
             'redirect_uri' => $this->getConf('wechatRediURI')
         ]);
+        $this->wbprovider = new \Oakhope\OAuth2\Client\Provider\WeiboProvider([
+            'client_id' => $this->getConf('weiboAppId'),
+            'client_secret' => $this->getConf('weiboSecret'),
+            'redirect_uri' => $this->getConf('weiboRediURI')
+        ]);
     }
 
     /**
@@ -83,8 +88,15 @@ class helper_plugin_clipauth_paperclipHelper extends DokuWiki_Plugin {
      *
      * @param $code
      */
-    public function getWeiboInfo($accessToken) {
-
+    public function getWeiboInfo($accessToken, $uid) {
+        $query  = 'access_token=' . $accessToken . '&uid=' . $uid;
+        $url = $this->getConf('weiboUserinfoURL') . '?' .$query;
+        $data = file_get_contents($url);
+        if (!$data) {
+            return false;
+        }
+        $data = json_decode($data, true);
+        return $data;
     }
 
     /**
@@ -101,6 +113,40 @@ class helper_plugin_clipauth_paperclipHelper extends DokuWiki_Plugin {
                 'code' => $_GET['code'],
             ]
         ));
+    }
+
+    /**
+     * To get weibo token
+     *
+     * @param $weiboTokenURL
+     *
+     * @return JSON
+     */
+    public function getWbAccessToken() {
+        return ($this->wbprovider->getAccessToken(
+            'authorization_code',
+            [
+                'code' => $_GET['code'],
+            ]
+        ));
+    }
+
+    /**
+     * Compose weibo login link
+     *
+     * @param $state
+     * @return string
+     */
+    public function getWeiBoUrl() {
+        // Fetch the authorization URL from the provider; this returns the
+        // urlAuthorize option and generates and applies any necessary parameters
+        // (e.g. state).
+        $authURL = $this->wbprovider->getAuthorizationUrl();
+
+        // Get the state generated for you and store it to the session.
+        $_SESSION['oauth2wbstate'] = $this->wbprovider->getState();
+
+        return $authURL;
     }
 
 }

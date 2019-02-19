@@ -31,5 +31,8 @@ $conf['wechatRespType'] = 'code';
 $conf['wechatScope'] = 'snsapi_login';
 $conf['wechatSecret'] = '2edc852df4fb54111b92027cbe46ac9a';
 // Weibo
-$conf['weibolink'] = '';
-
+$conf['weibolink'] = 'https://api.weibo.com/oauth2/authorize';
+$conf['weiboAppId'] = '2849862109';
+$conf['weiboSecret'] = '45c808b9f98130ae19f55d5cb7d00962';
+$conf['weiboRediURI'] = 'http://ipaper.com/doku.php?ext=weibo';
+$conf['weiboUserinfoURL'] = 'https://api.weibo.com/2/users/show.json';

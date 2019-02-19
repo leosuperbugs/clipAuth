@@ -65,17 +65,17 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
     private function setUserCookie($user, $sticky, $servicename, $validityPeriodInSeconds = 31536000) {
         global $USERINFO;
         global $auth;
-
+        global $INFO;
         $cookie = base64_encode($user).'|'.((int) $sticky).'|'.base64_encode('oauth').'|'.base64_encode($servicename);
         $cookieDir = empty($conf['cookiedir']) ? DOKU_REL : $conf['cookiedir'];
         $time      = $sticky ? (time() + $validityPeriodInSeconds) : 0;
         setcookie(DOKU_COOKIE,$cookie, $time, $cookieDir, '',($conf['securecookie'] && is_ssl()), true);
-
         $_SERVER['REMOTE_USER'] = $user;
         $_SESSION[DOKU_COOKIE]['auth']['user'] = $user;
 //                    $_SESSION[DOKU_COOKIE]['auth']['pass'] = $pass;
         $_SESSION[DOKU_COOKIE]['auth']['info'] = $USERINFO;
         $USERINFO = $this->dao->getUserDataCore($user);
+        // $_SERVER['REMOTE_USER'] = $USERINFO['name'];
     }
 
     /**
@@ -183,8 +183,50 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
 
                 }
                 // Handle the weibo login
-                elseif ($isExtLogin === $this->getLang('weibo')) {
+                elseif ($isExtLogin === $this->getConf('weibo')) {
+                    // if (empty($_GET['state']) || ($_GET['state'] !== rtrim($_SESSION['oauth2wbstate']))) {
+                    //     $a = $_SESSION;
+                    //     unset($_SESSION['oauth2wbstate']);
+                    //     exit('Invalid state');
+                    // }
+                    $authOAuthData = [];
+                    $accessToken = $hlp->getWbAccessToken();
+                    $values = $accessToken->getValues();
+                    $authOAuthData['accessToken'] = $accessToken->getToken();
+                    $authOAuthData['open_id'] = $values['uid'];
+                    $authOAuthData['refreshToken'] = $accessToken->getToken();
+                    $authOAuthData['union_id'] = $values['uid'];
+                    // // // set default group if no groups specified
+                    $grps = array($conf['defaultgroup']);
+                    $grps = join(',', $grps);
+                    //  // Check if user have already registered
 
+                    if ($username = $this->dao->getOAuthUserByOpenid($this->getConf('weibo'), $values['uid'])) {
+                        // Set user info
+                        $USERINFO = $this->dao->getUserDataCore($authOAuthData['uid']);
+                        $realname = $USERINFO['name'];
+                        $_SERVER['REMOTE_USER'] = $realname;
+                        $this->setUserCookie($authOAuthData['open_id'], $sticky, $this->getConf('weibo'));
+                    }
+                    else{
+                         // Not registered
+                        // get user info
+                        $userinfo = $hlp->getWeiboInfo($authOAuthData['accessToken'], $values['uid']);
+                        $authOAuthData['username'] = $userinfo['screen_name'];
+                        $username = $userinfo['screen_name'];
+                        // this function is not finished
+                        $addUserCoreResult = $this->dao->addUserCore(
+                            $authOAuthData['uid'],
+                            null,
+                            $authOAuthData['username'],
+                            null,
+                            $grps,
+                            null
+                        );
+                        $addAuthOAuthResult = $this->dao->addAuthOAuth($authOAuthData, $this->getConf('wechat'));
+                        $this->setUserCookie($authOAuthData['open_id'], $sticky, $this->getConf('weibo')); 
+                    }
+                    return true;
                 }
             }
         }

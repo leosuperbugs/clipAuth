@@ -215,6 +215,7 @@ class paperclipDAO
      * @return bool
      */
     public function insertEditlog($pageid, $summary, $editor) {
+        global $USERINFO;
         $sql = 'insert into '.$this->settings['editlog'].' (id, pageid, time, summary, editor)
             values
                 (null, :pageid, null, :summary, :editor)';
