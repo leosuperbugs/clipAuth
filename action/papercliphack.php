@@ -148,6 +148,22 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             'BEFORE',
             $this, 'login_form_handler'
         );
+        $controller->register_hook(
+            'COMMON_USER_LINK',
+            'AFTER',
+            $this,
+            'modify_user_link'
+        );
+    }
+
+    public function modify_user_link(Doku_Event &$event, $param) {
+        $data = &$event->data;
+        if ($this->dao) {
+            $info = $this->dao->getUserDataCore($data['username']);
+            if ($info) {
+                $data['userlink'] = $info['name'];
+            }
+        }
     }
 
 

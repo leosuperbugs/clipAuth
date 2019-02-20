@@ -103,7 +103,9 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
             $servicename = base64_decode($servicename, true);
 
             if ($USERINFO = $this->dao->getUserDataCore($cookieuser)) {
-                $_SERVER['REMOTE_USER'] = $USERINFO['name'];
+                // username is in database
+                // login user if previous loged-in
+                $_SERVER['REMOTE_USER'] = $cookieuser;
                 return $USERINFO;
             }
         }
@@ -124,12 +126,14 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
                     // Varify the session
                     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                     // Should be enabled in the future
-                if (empty($_GET['state']) || ($_GET['state'] !== rtrim($_SESSION['oauth2state'], '#wechat_redirect'))) {
+                    // Error here, use Redis instead!
 
-                    unset($_SESSION['oauth2state']);
-                    exit('Invalid state');
-
-                }
+//                if (empty($_GET['state']) || ($_GET['state'] !== rtrim($_SESSION['oauth2state'], '#wechat_redirect'))) {
+//
+//                    unset($_SESSION['oauth2state']);
+//                    exit('Invalid state');
+//
+//                }
 
                     // Get user data from wechat
                     // First, get access token from code
@@ -146,9 +150,8 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
                     if ($username = $this->dao->getOAuthUserByOpenid($this->getConf('wechat'), $values['openid'])) {
                         // Set user info
                         $USERINFO = $this->dao->getUserDataCore($authOAuthData['open_id']);
-                        $realname = $USERINFO['name'];
 
-                        $_SERVER['REMOTE_USER'] = $realname;
+                        $_SERVER['REMOTE_USER'] = $username;
                         $this->setUserCookie($authOAuthData['open_id'], $sticky, $this->getConf('wechat'));
 
 
