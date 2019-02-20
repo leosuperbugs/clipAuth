@@ -176,7 +176,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             $event->preventDefault();
             // Still need to mute the
 
-        } elseif ($_POST['call']=='clip_submit') {
+        } elseif ($_POST['call']==='clip_submit') {
             global $_REQUEST;
             $editcontent = $_REQUEST['wikitext'];
             $res = $this->contentFilter($editcontent);
@@ -1243,6 +1243,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
                                 return true;
                             else
                                 return false;
+	    
                         }
                     }
                 }
