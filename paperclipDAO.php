@@ -63,7 +63,120 @@ class paperclipDAO
     }
 
     /**
+     * Modify table auth_username
+     *
+     * @param $id
+     * @param $username
+     * @param $encodedPass
+     * @return bool
+     */
+    public function addAuthUsername($id, $username, $encodedPass) {
+        try {
+            $sql = "insert into {$this->settings['auth_username']} (id, username, password)
+            values 
+            (:id, :username, :password)";
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':id', $id, PDO::PARAM_INT);
+            $statement->bindValue(':username', $username);
+            $statement->bindValue(':password', $encodedPass);
+
+            $result = $statement->execute();
+            return $result;
+        } catch (\PDOException $e) {
+            echo 'add auth username';
+            echo $e->getMessage();
+            return false;
+        }
+    }
+
+    public function addAuthOAuth($data, $third_party) {
+        $id = $this->getUserID($data['open_id']);
+        $sql = "insert into {$this->settings['auth_oauth']} (
+                    id, username, third_party, credential, 
+                    refresh_token, union_id, open_id, create_time, refresh_time)
+                values (
+                    :id, :username, :third_party, :accessToken, 
+                    :refreshToken, :union_id, :open_id, null, null)";
+
+        $statement = $this->pdo->prepare($sql);
+
+        $statement->bindValue(":id", $id, PDO::PARAM_INT);
+        $statement->bindValue(":username", $data['open_id']);
+        $statement->bindValue(":third_party", $third_party);
+        $statement->bindValue(":accessToken", $data['accessToken']);
+        $statement->bindValue(":refreshToken", $data['refreshToken']);
+        $statement->bindValue(":union_id", $data['union_id']);
+        $statement->bindValue(":open_id", $data['open_id']);
+
+        $result = $statement->execute();
+
+        return $result;
+    }
+
+    /**
+     * Get record from table auth_oauth
+     * @param $third_party
+     * @param $openid
+     * @return mixed
+     */
+    public function getOAuthUserByOpenid($third_party, $openid) {
+        try {
+            $sql = "select username from {$this->settings['auth_oauth']} where third_party=:third_party and open_id=:openid";
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':third_party', $third_party);
+            $statement->bindValue(':openid', $openid);
+            $statement->execute();
+
+            $result = $statement->fetch(PDO::FETCH_ASSOC);
+            if ($result) {
+                return $result['username'];
+            } else {
+                return false;
+            }
+        } catch (\PDOException $e) {
+            echo 'get oauth user by openid';
+            echo $e->getMessage();
+            return false;
+        }
+    }
+
+
+    /**
+     * Only add user to table userinfo (user or users2 in test env)
+     * Used with OAuth
+     *
+     * @param $user
+     * @param $pass
+     * @param $name
+     * @param $mail
+     * @param $grps
+     * @param $verficationCode
+     * @return bool
+     */
+    public function addUserCore($user, $pass, $name, $mail, $grps, $verficationCode) {
+        try {
+            $sql = "insert into ".$this->settings['usersinfo'].
+                " (id, username, realname, mailaddr, identity, verifycode, password)
+            values
+                (null, :user, :name, :mail, :grps, :vc, null)";
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':user', $user);
+            $statement->bindValue(':name', $name);
+            $statement->bindValue(':mail', $mail);
+            $statement->bindValue(':grps', $grps);
+            $statement->bindValue(':vc', $verficationCode);
+
+            $result = $statement->execute();
+            return $result;
+        } catch (\PDOException $e) {
+            echo 'addUser';
+            echo $e->getMessage();
+            return false;
+        }
+    }
+    /**
      * Add user information to database
+     * Username login only
      *
      * @param $user
      * @param $pass
@@ -76,20 +189,15 @@ class paperclipDAO
     public function addUser($user, $pass, $name, $mail, $grps, $verficationCode) {
         try {
             // create the user in database
-            $sql = "insert into ".$this->settings['usersinfo'].
-                "(id, username, password, realname, mailaddr, identity, verifycode)
-            values
-            (null, :user, :pass, :name, :mail, :grps, :vc)";
-            $statement = $this->pdo->prepare($sql);
-            $statement->bindValue(':user', $user);
-            $statement->bindValue(':pass', $pass);
-            $statement->bindValue(':name', $name);
-            $statement->bindValue(':mail', $mail);
-            $statement->bindValue(':grps', $grps);
-            $statement->bindValue(':vc', $verficationCode);
+//             "(id, username, password, realname, mailaddr, identity, verifycode)
+//            (null, :user, :pass, :name, :mail, :grps, :vc)";
+            $result = $this->addUserCore($user, $pass, $name, $mail, $grps, $verficationCode);
 
-            $result = $statement->execute();
-            return $result;
+            // Add user password into auth table
+            $id = $this->getUserID($user);
+            $addAuthResult = $this->addAuthUsername($id, $user, $pass);
+
+            return ($result && $addAuthResult);
 
         } catch (\PDOException $e) {
             echo 'addUser';
@@ -149,26 +257,122 @@ class paperclipDAO
     }
 
     /**
-     * Get user info from username
+     * Get password from auth_username
      *
      * @param $user
      * @return bool
      */
-    public function getUserData($user) {
-        $sql = 'select * from '.$this->settings['usersinfo'].' where username = :username';
+    public function getUserPassword($user) {
+        try {
+            $sql = "select password from {$this->settings['auth_username']} where username=:user";
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':username', $user);
+            $statement->execute();
+
+            $result = $statement->fetch(PDO::FETCH_ASSOC);
+
+            if ($result == false) {
+                return false;
+            }
+
+            return $result['password'];
+        } catch (\PDOException $e) {
+            echo 'get auth username';
+            echo $e->getMessage();
+            return false;
+        }
+    }
+
+    /**
+     * For user registration
+     *
+     * @param $user
+     * @return mixed
+     */
+    private function getUserID($user) {
+        $sql = "select id from {$this->settings['usersinfo']} where username=:user";
+        $statement = $this->pdo->prepare($sql);
+        $statement->bindValue(':user', $user);
+        $statement->execute();
+        $result = $statement->fetch(PDO::FETCH_ASSOC);
+
+        return $result['id'];
+
+    }
+
+    /**
+     * Only select data from userinfo (users)
+     * @param $user
+     * @return array|bool
+     */
+    public function getUserDataCore($user) {
+        $userinfo = $this->settings['usersinfo'];
+
+        $sql = "select 
+                id,
+                username,
+                realname,
+                mailaddr,
+                identity
+                from $userinfo 
+                where username = :username";
+
         $statement = $this->pdo->prepare($sql);
         $statement->bindValue(':username', $user);
         $statement->execute();
 
         $result = $statement->fetch(PDO::FETCH_ASSOC);
+//        $result['password'] = $this->getUserPassword($user);
 
         if ($result == false) {
             return false;
         }
 
         $userinfo = $this->transferResult($result);
-
         return $userinfo;
+    }
+
+    /**
+     * Get user info from username
+     *
+     * @param $user
+     * @return bool
+     */
+    public function getUserData($user, $isPassNeeded=true) {
+        if ($isPassNeeded) {
+            $userinfo = $this->settings['usersinfo'];
+            $authUsername = $this->settings['auth_username'];
+
+            $sql = "select 
+                $userinfo.id,
+                $userinfo.username,
+                $userinfo.realname,
+                $userinfo.mailaddr,
+                $authUsername.password,
+                $userinfo.identity
+                from $userinfo 
+                
+                inner join $authUsername on $userinfo.id = $authUsername.id
+                where $userinfo.username = :username";
+
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':username', $user);
+            $statement->execute();
+
+            $result = $statement->fetch(PDO::FETCH_ASSOC);
+//        $result['password'] = $this->getUserPassword($user);
+
+            if ($result == false) {
+                return false;
+            }
+
+            $userinfo = $this->transferResult($result);
+            $userinfo['pass'] = $result['password'];
+
+            return $userinfo;
+        } else {
+            return $this->getUserDataCore($user);
+        }
     }
 
     /**
@@ -177,7 +381,21 @@ class paperclipDAO
      * @return bool
      */
     public function getUserDataByEmail($email) {
-        $sql = 'select * from '.$this->settings['usersinfo'].' where mailaddr = :email';
+        $userinfo = $this->settings['usersinfo'];
+        $authUsername = $this->settings['auth_username'];
+
+        $sql = "select 
+                $userinfo.id,
+                $userinfo.username,
+                $userinfo.realname,
+                $userinfo.mailaddr,
+                $authUsername.password,
+                $userinfo.identity
+                from $userinfo 
+                inner join $authUsername on $userinfo.id = $authUsername.id
+                where $userinfo.mailaddr = :email";
+
+//        $sql = 'select * from '.$this->settings['usersinfo'].' where mailaddr = :email';
         $statement = $this->pdo->prepare($sql);
         $statement->bindValue(':email', $email);
         $statement->execute();
@@ -191,6 +409,7 @@ class paperclipDAO
         $name = $result['username'];
         $userinfo = $this->transferResult($result);
         $userinfo['user'] = $name;
+        $userinfo['pass'] = $result['password'];
 
         return $userinfo;
     }
@@ -274,7 +493,7 @@ class paperclipDAO
         try {
             $sql = 'select count(*) from '.$this->settings[$tablename];
             if ($cond) {
-                $sql .= ' where '.$cond;
+                $sql .= " where $cond";
             }
             $result = $this->pdo->query($sql);
         } catch (PDOException $e) {
@@ -320,31 +539,27 @@ class paperclipDAO
         try {
             $editlog = $this->settings['editlog'];
             $users = $this->settings['usersinfo'];
-
             $sql = "select
                     $editlog.id as editlogid,
                     $editlog.pageid,
                     $editlog.time,
                     $editlog.summary,
                     $editlog.editor,
-                    $users.realname,
-                    $users.id as editorid,
-                    $users.mailaddr,
-                    $users.identity
-            from $editlog inner join $users on $editlog.editor = $users.username";
-
+                    us.realname,
+                    us.id as editorid,
+                    us.mailaddr,
+                    us.identity
+            from $editlog inner join $users as us on $editlog.editor = us.username";
             if ($conditions) {
                 $sql .= " where $conditions";
             }
             $sql .= " order by $editlog.id DESC limit :offset ,:count";
-
             $statement = $this->pdo->prepare($sql);
             // Be careful about the data_type next time!
             $statement->bindValue(":offset", $offset, PDO::PARAM_INT);
             $statement->bindValue(":count", $countPage, PDO::PARAM_INT);
             $statement->execute();
             return $statement;
-
         } catch (PDOException $e) {
             echo $e->getMessage();
             return false;
@@ -357,21 +572,21 @@ class paperclipDAO
             $users = $this->settings['usersinfo'];
 
             $sql = "select
-                    $comment.hash,
-                    $comment.comment as summary,
-                    $comment.time,
-                    $comment.username as editor,
-                    $comment.pageid,
-                    $users.realname,
-                    $users.id as userid,
-                    $users.mailaddr,
-                    $users.identity
-                    from $comment inner join $users on $comment.username = $users.username";
+                    com.hash,
+                    com.comment as summary,
+                    com.time,
+                    com.username as editor,
+                    com.pageid,
+                    us.realname,
+                    us.id as userid,
+                    us.mailaddr,
+                    us.identity
+                    from $comment as com inner join $users as us on com.username = us.username";
 
             if ($conditions) {
                 $sql .= " where $conditions";
             }
-            $sql .= " order by $comment.time DESC limit :offset ,:count";
+            $sql .= " order by com.time DESC limit :offset ,:count";
 
             $statement = $this->pdo->prepare($sql);
             // Be careful about the data_type next time!
@@ -504,22 +719,22 @@ class paperclipDAO
      * @param $pass
      * @return bool
      */
-    public function setUserInfoO($user, $pass) {
-        try {
-            $sql = "update ".$this->settings['usersinfo'] ." set password=:pass where username=:user";
-            $statement = $this->pdo->prepare($sql);
-            $statement->bindValue(':pass', $pass);
-            $statement->bindValue(':user', $user);
-            $result = $statement->execute();
-
-            return $result;
-        } catch (\PDOException $e) {
-            echo 'setUserInfo';
-            echo $e->getMessage();
-            return false;
-        }
-
-    }
+//    public function setUserInfoO($user, $pass) {
+//        try {
+//            $sql = "update ".$this->settings['usersinfo'] ." set password=:pass where username=:user";
+//            $statement = $this->pdo->prepare($sql);
+//            $statement->bindValue(':pass', $pass);
+//            $statement->bindValue(':user', $user);
+//            $result = $statement->execute();
+//
+//            return $result;
+//        } catch (\PDOException $e) {
+//            echo 'setUserInfo';
+//            echo $e->getMessage();
+//            return false;
+//        }
+//
+//    }
 
     private function checkFirstAppendComma(&$sql, &$notFirst) {
         if ($notFirst) {
@@ -529,15 +744,38 @@ class paperclipDAO
         }
     }
 
+    /**
+     * Set password for table auth_username
+     *
+     * @param $user
+     * @param $pass
+     * @return bool
+     */
+    public function setUsernamePass($user, $pass) {
+        try {
+            $sql = "update {$this->settings['auth_username']} set password=:password where username=:user";
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':user', $user);
+            $statement->bindValue(':password', $pass);
+            $result = $statement->execute();
+
+            return $result;
+        } catch (\PDOException $e) {
+            echo 'ser auth username';
+            echo $e->getMessage();
+            return false;
+        }
+    }
+
     public function setUserInfo($user, $changes) {
         $sql = "update ".$this->settings['usersinfo']." set ";
         $notFirst = false;
 
         // Process the updated content
-        if ($changes['pass']) {
-            $this->checkFirstAppendComma($sql, $notFirst);
-            $sql .= " password=:pass ";
-        }
+//        if ($changes['pass']) {
+//            $this->checkFirstAppendComma($sql, $notFirst);
+//            $sql .= " password=:pass ";
+//        }
         if ($changes['mail']) {
             $this->checkFirstAppendComma($sql, $notFirst);
             $sql .= " mailaddr=:mail ";
@@ -554,8 +792,10 @@ class paperclipDAO
             $statement = $this->pdo->prepare($sql);
             // Bind values here
             if ($changes['pass']) {
+                // Now password is stored in another table
                 $pass = auth_cryptPassword($changes['pass']);
-                $statement->bindValue(':pass', $pass);
+                $this->setUsernamePass($user, $pass);
+//                $statement->bindValue(':pass', $pass);
             }
             if ($changes['mail']) {
                 $statement->bindValue(':mail', $changes['mail']);
@@ -637,7 +877,7 @@ class paperclipDAO
      */
     private  function  transferResult ($result) {
         return [
-            'pass' => $result['password'],
+//            'pass' => $result['password'],
             'name' => $result['realname'],
             'mail' => $result['mailaddr'],
             'id'   => $result['id'],
@@ -647,5 +887,55 @@ class paperclipDAO
         ];
     }
 
+
+    /**
+     * Count the number of EditUserinfo using conditions in $cond
+     *
+     * @param $cond
+     * @return int|mixed count result
+     */
+    public function countEditUserinfo($con) {
+        try {
+            $editlog = $this->settings['editlog'];
+            $users = $this->settings['usersinfo'];
+            $sql = "select
+                    $editlog.id from $editlog inner join $users as us on $editlog.editor = us.username";
+            if ($con) {
+                $sql .= " where $con";
+            }
+            $statement = $this->pdo->prepare($sql);
+            $statement->execute();
+            $res = $statement->fetchAll(PDO::FETCH_ASSOC);
+            return count($res);
+        } catch (PDOException $e) {
+            echo $e->getMessage();
+            return 0;
+        }
+    }
+
+    /**
+     * Count the number of CommentUserinfo using conditions in $cond
+     *
+     * @param $cond
+     * @return int|mixed count result
+     */
+    public function countCommentUserinfo($con) {
+        try {
+            $comment = $this->settings['comment'];
+            $users = $this->settings['usersinfo'];
+            $sql = "select
+                    com.id from $comment as com inner join $users as us on com.username = us.username";
+            if ($con) {
+                $sql .= " where $con";
+            }
+            $statement = $this->pdo->prepare($sql);
+            $statement->execute();
+            $res = $statement->fetchAll(PDO::FETCH_ASSOC);
+            return count($res);
+        } catch (PDOException $e) {
+            echo $e->getMessage();
+            return 0;
+        }
+    }
 
 }

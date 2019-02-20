@@ -11,4 +11,5 @@ conf/metadata.php
 settings.php
 invite/insertSQL.sh
 _test/
+*.DS_STORE
 aliyun.ak.ini

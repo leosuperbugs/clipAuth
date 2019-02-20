@@ -23,3 +23,6 @@ $lang['userIdentity'] = '用户状态：';
 $lang['edited'] = '编辑了';
 $lang['process'] = '处理';
 $lang['cantban'] = '不能禁言管理员';
+$lang['extlogin'] = '第三方登录';
+$lang['wechatlogin'] = '微信登录';
+$lang['weibologin'] = '微博登录';
