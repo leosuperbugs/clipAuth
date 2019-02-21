@@ -135,57 +135,55 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
 //
 //                }
 
-                    // Get user data from wechat
-                    // First, get access token from code
-                    $authOAuthData = [];
-                    $accessToken = $hlp->getAccessToken();
-                    $values = $accessToken->getValues();
-                    $authOAuthData['accessToken'] = $accessToken->getToken();
-                    $authOAuthData['refreshToken'] = $accessToken->getRefreshToken();
-                    $authOAuthData['open_id'] = $values['openid'];
-                    $authOAuthData['union_id'] = $values['unionid'];
+                // Get user data from wechat
+                // First, get access token from code
+                $authOAuthData = [];
+                $accessToken = $hlp->getAccessToken();
+                $values = $accessToken->getValues();
+                $authOAuthData['accessToken'] = $accessToken->getToken();
+                $authOAuthData['refreshToken'] = $accessToken->getRefreshToken();
+                $authOAuthData['open_id'] = $values['openid'];
+                $authOAuthData['union_id'] = $values['unionid'];
 
 //                    $username = '';
-                    // Check if user have already registered
-                    if ($username = $this->dao->getOAuthUserByOpenid($this->getConf('wechat'), $values['openid'])) {
-                        // Set user info
-                        $USERINFO = $this->dao->getUserDataCore($authOAuthData['open_id']);
+                // Check if user have already registered
+                if ($username = $this->dao->getOAuthUserByOpenid($this->getConf('wechat'), $values['openid'])) {
+                    // Set user info
+                    $USERINFO = $this->dao->getUserDataCore($authOAuthData['open_id']);
 
-                        $_SERVER['REMOTE_USER'] = $username;
-                        $this->setUserCookie($authOAuthData['open_id'], $sticky, $this->getConf('wechat'));
+                    $_SERVER['REMOTE_USER'] = $username;
+                    $this->setUserCookie($authOAuthData['open_id'], $sticky, $this->getConf('wechat'));
 
 
-                    }
-                    else {
-                        // Not registered
-                        // get user info
-                        $userinfo = $hlp->getWechatInfo($authOAuthData['accessToken'], $values['openid']);
-                        $authOAuthData['username'] = $userinfo['nickname'];
-                        $username = $userinfo['nickname'];
+                } else {
+                    // Not registered
+                    // get user info
+                    $userinfo = $hlp->getWechatInfo($authOAuthData['accessToken'], $values['openid']);
+                    $authOAuthData['username'] = $userinfo['nickname'];
+                    $username = $userinfo['nickname'];
 
-                        // set default group if no groups specified
-                        $grps = array($conf['defaultgroup']);
-                        $grps = join(',', $grps);
+                    // set default group if no groups specified
+                    $grps = array($conf['defaultgroup']);
+                    $grps = join(',', $grps);
 
-                        // this function is not finished
-                        $addUserCoreResult = $this->dao->addUserCore(
-                            $authOAuthData['open_id'],
-                            null,
-                            $authOAuthData['username'],
-                            null,
-                            $grps,
-                            null
-                        );
-                        $addAuthOAuthResult = $this->dao->addAuthOAuth($authOAuthData, $this->getConf('wechat'));
+                    // this function is not finished
+                    $addUserCoreResult = $this->dao->addUserCore(
+                        $authOAuthData['open_id'],
+                        null,
+                        $authOAuthData['username'],
+                        null,
+                        $grps,
+                        null
+                    );
+                    $addAuthOAuthResult = $this->dao->addAuthOAuth($authOAuthData, $this->getConf('wechat'));
 
-                        // Set cookies
-                        $this->setUserCookie($authOAuthData['open_id'], $sticky, $this->getConf('wechat'));
+                    // Set cookies
+                    $this->setUserCookie($authOAuthData['open_id'], $sticky, $this->getConf('wechat'));
                     }
 
                     return true;
 
-                }
-                // Handle the weibo login
+                } // Handle the weibo login
                 elseif ($isExtLogin === $this->getLang('weibo')) {
 
                 }
