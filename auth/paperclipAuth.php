@@ -453,7 +453,7 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
     {
         $counter = 0;
         foreach ($users as $user) {
-            if ($this->getUserData($user) !== false) {
+            if ($this->dao->getUserDataCore($user) !== false) {
                 $result = $this->dao->deleteUser($user);
                 if ($result) $counter += 1;
             }
