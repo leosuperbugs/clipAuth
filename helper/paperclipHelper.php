@@ -56,7 +56,10 @@ class helper_plugin_clipauth_paperclipHelper extends DokuWiki_Plugin {
         $authURL = $this->provider->getAuthorizationUrl();
 
         // Get the state generated for you and store it to the session.
+        // I think I should start a session here
+        session_start();
         $_SESSION['oauth2state'] = $this->provider->getState();
+        session_write_close();
 
         return $authURL;
     }

@@ -1452,6 +1452,8 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 
     /**
      * Author: Max Qian
+     * Modified by Mark T. Nie
+     *
      * Used to handle the mail verification
      *
      * @param Doku_Event $event
@@ -1468,7 +1470,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
       if ($code && $mail) {
 
         // retrieve data
-        $result = $this->dao->getUserDataByEmail($mail);
+        $result = $this->dao->getUserDataByEmailCore($mail);
 
         if ($result === false) { // invalid $mail
 
