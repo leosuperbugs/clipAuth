@@ -46,4 +46,83 @@ jQuery( document ).ready(function($) {
         enableTime: true,
         dateFormat: "Y-m-d H:i",
     });
+
+    //register form verification
+    var regform = $("#dw__register");
+    var errArr = new Array();
+    regform.find("button[type='submit']").attr("disabled","disabled");
+    //check submit button should be disabled
+    var checkButton = function(){
+        var valnum = 0;
+        var isnull = false;
+        $("#dw__register").find("div[class='form__wrapper']").find("input").each(function(){
+            var val = $(this).val();
+            if (!val) {
+                isnull = true;  
+                return;  
+            }                            
+        });
+        if ($(".regErrmsg").length > 0)
+            var haserr = true;
+        else
+            var haserr = false;
+        return (isnull || haserr);
+    };
+    var regverify = function (regform, own, parent, iname, ivalue, data) {
+        if (own.is("input[name="+iname+"]")) {
+            $.post("/lib/exe/ajax.php",regform.serialize(),function(msg){
+                var res = JSON.parse(msg.replace(/AJAX.*/,''));
+                if (res[iname]) {
+                    parent.find("."+iname).remove();
+                    parent.append("<span class='regErrmsg "+iname+"'>" + res[iname] + "</span>");
+                    $("input[name="+iname+"]").addClass("errorinput");
+                } else {
+                    parent.find("."+iname).remove();
+                    $("input[name="+iname+"]").removeClass("errorinput");
+                }
+                //hide apply invitecode
+                if ($(".regErrmsg").length > 0) {
+                    regform.find("p").css("display","none");
+                }
+                //button should be disabled
+                if (checkButton()) {
+                    regform.find("button[type='submit']").attr("disabled","disabled");
+                }else{
+                    regform.find("button[type='submit']").removeAttr("disabled");
+                }
+            });
+        }
+    };
+    // add error msg span dom
+    $("#dw__register").find("div[class='form__wrapper']").find("input").each(function(){
+        var inpname = $(this).attr("name");
+        $(this).after('<span class="regErrmsg '+inpname+'" style=display:none;></span>');
+    });
+    // keyup event
+    $("#dw__register").find("input").keyup(function(ev) {
+        var parent = $(this).parent();
+        var iname = $(this).attr("name");
+        var ivalue = $(this).val();
+        var own = $(this);
+        var data = {"call": "reg_submit"};
+        data[iname] = ivalue;
+        regverify(regform, own, parent, iname, ivalue, data);
+    });
+    //blur event
+    $("#dw__register").find("input").blur(function(ev) {
+        var parent = $(this).parent();
+        var iname = $(this).attr("name");
+        var ivalue = $(this).val();
+        var own = $(this);
+        var data = {"call": "reg_submit"};
+        data[iname] = ivalue;
+        regverify(regform, own, parent, iname, ivalue, data);
+    });
+    $("#dw__register").find("input").click(function(){
+        if ($(this).hasClass("errorinput")) {
+            $(this).removeClass("errorinput");
+            $("."+$(this).attr("name")).css("display","none");
+        }
+    });
+    
 });

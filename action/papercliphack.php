@@ -228,6 +228,68 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             }else{
                 echo 'true';
             }
+        } elseif ($event->data == 'reg_submit'){
+            $errmsg = array();
+            $invitecode = $_REQUEST['invitationCode'];
+            $username = $_REQUEST['login'];
+            $email = $_REQUEST['email'];
+            $pass = $_REQUEST['pass'];
+            $passchk = $_REQUEST['passchk'];
+            $fullname = $_REQUEST['fullname'];
+            //verify invitecode
+            if ($invitecode) {
+                $result = $this->dao->checkInvtCode($invitecode);
+                if ($result == false) 
+                    $errmsg['invitationCode'] = $this->getLang('inviteNull');
+                elseif($result['isUsed'] == 1)
+                    $errmsg['invitationCode'] = $this->getLang('inviteInvalid');
+            } else {
+                $errmsg['invitationCode'] = $this->getLang('inviteEmpty');
+            }
+            //verify username
+            if ($username) {
+                if (strlen(rtrim($username)) > $this->getConf('usernameMaxLen')) {
+                    $errmsg['login'] = $this->getLang('usernameLength');
+                }
+                if ($this->dao->isUsernameExist($username)) {
+                    $errmsg['login'] = $this->getLang('usernameExist');
+                }
+                elseif($this->contentFilter($username) == false) {
+                    $errmsg['login'] = $this->getLang('usernameBad');  
+                }
+            } else {
+                $errmsg['login'] = $this->getLang('usernameEmpty');
+            }
+            //verify email
+            if ($email) {
+                if (preg_match('/^\w+@\w+.\w+$/', $email) == false) {
+                    $errmsg['email'] = $this->getLang('emailInvalid'); 
+                }elseif ($this->dao->getUserDataByEmail($email)) {
+                    $errmsg['email'] = $this->getLang('emailExist');
+                }
+            } else {
+                $errmsg['email'] = $this->getLang('emailEmpty');
+            }
+            //verify password
+            if (empty($pass)) {
+                $errmsg['pass'] = $this->getLang('passEmpty');
+            }
+            //verify passchk
+            if ($passchk) {
+                if ($passchk !== $pass)
+                    $errmsg['passchk'] = $this->getLang('passchkDiff');
+            } else {
+                $errmsg['passchk'] = $this->getLang('passchkEmpty');
+            }
+            //verify fullname
+            if ($fullname) {
+                if (strlen($fullname) > $this->getConf('fullnameMaxLen'))
+                    $errmsg['fullname'] = $this->getLang('fullnameLength');
+            } else {
+                $errmsg['fullname'] = $this->getLang('fullnameEmpty');
+            }
+            $res = json_encode($errmsg);
+            echo $res;
         }
     }
 
@@ -272,8 +334,8 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
      */
     public function modifyRegisterForm(Doku_Event $event, $param)
     {
+        $event->data->_hidden['call'] = 'reg_submit';
         $registerFormContent =& $event->data->_content;
-        $this->insertRegisterElements($registerFormContent);
     }
 
     /**

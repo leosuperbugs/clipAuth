@@ -938,4 +938,19 @@ class paperclipDAO
         }
     }
 
+    //is username exist 
+    public function isUsernameExist($username) {
+        try {
+            $sql = "select id from {$this->settings['usersinfo']} where username=:username";
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':username', $username);
+            $statement->execute();
+            $res = $statement->fetchAll(PDO::FETCH_ASSOC);
+            return $res;
+        } catch (PDOException $e) {
+            echo $e->getMessage();
+            return 0;
+        }
+    }
+
 }
