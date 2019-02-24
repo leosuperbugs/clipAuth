@@ -23,6 +23,8 @@ $lang['userIdentity'] = '用户状态：';
 $lang['edited'] = '编辑了';
 $lang['process'] = '处理';
 $lang['cantban'] = '不能禁言管理员';
+$lang['editheader'] = '词条编辑';
+$lang['editindex'] = '索引';
 $lang['extlogin'] = '第三方登录';
 $lang['wechatlogin'] = '微信登录';
 $lang['weibologin'] = '微博登录';
@@ -43,5 +45,4 @@ $lang['passchkEmpty'] = '确认密码不能为空';
 $lang['passchkDiff'] = '两次密码输入不一致';
 $lang['fullnameEmpty'] = '全名不能为空';
 $lang['passchkLength'] = '全名长度不能超过16位';
-
 

@@ -1,6 +1,15 @@
 @clipunit :1rem;
 @errormsg :#fcc;
+@clipgray :__paperclip__edititem__;
+@clipblack :__paperclip__darkgrey__;
+@borderline :__paperclip__textarea__;
+@clipwhite :__background__;
+@blineheight :0.0883rem;
+@titlefont :3rem;
+@barspacing :2.292rem;
+@top_bottom_distance :6.667rem;
 @inputwidth: 30vw;
+
 
 .paperclip__selfinfo {
   padding: 6 * @clipunit 8vw 0;
@@ -144,7 +153,7 @@
   margin-top: @srchMargin;
   .paperclip__srchrslt {
     margin-bottom: @srchMargin;
-    font-size: 3rem;
+    font-size: @titlefont;
     font-weight: bolder;
     color: __paperclip__stdbg__;
     display: inline-block;
@@ -362,6 +371,7 @@ noscript {
       margin-right: @clipunit;
       background-color: transparent;
 }
+
 .dokuwiki .regErrmsg {
   width: 170px;
   text-align: left;
@@ -369,4 +379,194 @@ noscript {
 }
 .dokuwiki .errorinput {
   border-color: __paperclip__gold__;
+}
+
+.dokuwiki .paperclip__edit__header {
+  margin-top: @top_bottom_distance;
+  color: @clipblack;
+  font-size: @titlefont;
+  .paperclip__editlog__index {
+    font-size: 0.883rem;
+    margin-top: 1.4rem;
+    margin-bottom: 1.25rem;
+  }
+}
+blockquote {
+  color: @clipgray;
+}
+.paperclip__edittitle {
+  margin-top: 3.333rem;
+  margin-bottom: 2rem;
+  font-size: @titlefont;
+  font-family: -apple-system,BlinkMacSystemFont,Helvetica Neue,PingFang SC,Microsoft YaHei,Source Han Sans SC,Noto Sans CJK SC,WenQuanYi Micro Hei,sans-serif;
+  font-weight: bold;
+}
+
+.mode_edit {
+  .toolbutton {
+    background-color: @clipwhite;
+    border: none;
+    margin-left: 4.6rem;
+    img {
+      height: 0.883rem;
+    }
+  }
+  .toolbar {
+    border-top: 0.167rem solid @borderline;
+    border-bottom: @blineheight solid @borderline;
+  }
+  .tool__bar {
+    margin-left: -2.5rem;
+    margin-bottom: 1.625rem;
+    margin-top: 1.583rem;
+  }
+  #wiki__text {
+    font-size: 1rem;
+    border: none;
+    resize: none;
+    outline: none;
+    overflow: hidden;
+    line-height: 1.667rem;
+  }
+  .editBar {
+    padding-top: @barspacing;
+    border-top: @blineheight solid @borderline;
+    margin-top: 0.948rem;
+  }
+  #dw__editform {
+    margin-top: 1.958rem;
+  }
+  .editButtons {
+    margin-left: 3.335rem;
+    margin-top: @barspacing;
+  }
+  .summary {
+    margin-top: @barspacing;
+    margin-left: 1.569rem;
+  }
+  #size__ctl {
+    display: none;
+  }
+  button[type=submit] {
+    margin-right: 3.175rem;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    border: none;
+    text-decoration: underline;
+    color: __paperclip__gold__;
+    background-color: transparent;
+  }
+  input[id=minoredit] {
+    margin-left: 4.26rem;
+    width: 0.6875rem;
+    height: 0.6875rem;
+    background-color: @clipwhite;
+    -webkit-appearance:none;
+    border: 0.0625rem solid @borderline;
+    border-radius: 0.125rem;
+    outline: none;
+  }
+  input[id=minoredit]:checked {
+    background: url("/lib/plugins/clipauth/images/right.jpg")no-repeat center;
+  }
+  input[id=edit__summary] {
+    width: 16rem;
+    border: none;
+    outline: none;
+    border-bottom: 0.0283rem solid @clipblack;
+  }
+  .license {
+    margin-top: 4rem;
+    margin-bottom: @top_bottom_distance;
+    color: @clipgray;
+    a {
+      color: __paperclip__gold__;
+    }
+  }
+}
+.mode_preview {
+  .toolbutton {
+    background-color: white;
+    border: none;
+  }
+  .toolbar {
+    border-top: 0.167rem solid @borderline;
+    border-bottom: @blineheight solid @borderline;
+  }
+  .tool__bar {
+    margin-left: -2.5rem;
+    margin-bottom: 1.625rem;
+    margin-top: 1.583rem;
+  }
+  .toolbutton {
+    margin-left: 4.6rem;
+    img {
+      height: 0.883rem;
+    }
+  }
+  #wiki__text {
+    font-size: 1rem;
+    border: none;
+    resize: none;
+    outline: none;
+    overflow: hidden;
+    line-height: 1.667rem;
+  }
+  .editBar {
+    padding-top: @barspacing;
+    border-top: @blineheight solid @borderline;
+    margin-top: 0.948rem;
+  }
+  #dw__editform {
+    margin-top: 1.958rem;
+  }
+  .editButtons {
+    margin-left: 3.335rem;
+    margin-top: @barspacing;
+  }
+  .summary {
+    margin-top: @barspacing;
+    margin-left: 1.569rem;
+  }
+  #size__ctl {
+    display: none;
+  }
+  button[type=submit] {
+    margin-right: 3.175rem;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    border: none;
+    text-decoration: underline;
+    color: __paperclip__gold__;
+    background-color: transparent;
+  }
+  input[id=minoredit] {
+    margin-left: 4.26rem;
+    width: 0.6875rem;
+    height: 0.6875rem;
+    background-color: @clipwhite;
+    -webkit-appearance:none;
+    border: 0.0625rem solid @borderline;
+    border-radius: 0.125rem;
+    outline: none;
+  }
+  input[id=minoredit]:checked {
+    background: url("/lib/plugins/clipauth/images/right.jpg")no-repeat center;
+  }
+  input[id=edit__summary] {
+    width: 16rem;
+    border: none;
+    outline: none;
+    border-bottom: 0.0283rem solid @clipblack;
+  }
+  .license {
+    margin-top: 4rem;
+    margin-bottom: 2rem;
+    color: @clipgray;
+    a {
+      color: __paperclip__gold__;
+    }
+  }
 }

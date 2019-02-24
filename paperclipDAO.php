@@ -3,6 +3,7 @@ namespace dokuwiki\paperclip;
 
 use Doctrine\DBAL\Driver\PDOException;
 use PDO;
+
 /**
  * Created by PhpStorm.
  * User: leo
@@ -373,6 +374,37 @@ class paperclipDAO
         } else {
             return $this->getUserDataCore($user);
         }
+    }
+
+    /**
+     * Core function to get userinfo
+     * @param $email
+     * @return array|bool
+     */
+    public function getUserDataByEmailCore($email) {
+        $userinfo = $this->settings['usersinfo'];
+
+        $sql = "select 
+                id,
+                username,
+                realname,
+                mailaddr,
+                identity
+                from $userinfo 
+                where mailaddr = :email";
+
+        $statement = $this->pdo->prepare($sql);
+        $statement->bindValue(':email', $email);
+        $statement->execute();
+
+        $result = $statement->fetch(PDO::FETCH_ASSOC);
+
+        if ($result == false) {
+            return false;
+        }
+
+        $userinfo = $this->transferResult($result);
+        return $userinfo;
     }
 
     /**
@@ -849,6 +881,47 @@ class paperclipDAO
     }
 
     /**
+     * Return a constant auth table array
+     */
+    private function getAuthTables() {
+        // should be modified if auth tables changed later
+        return [
+            $this->settings['auth_username'],
+            $this->settings['auth_oauth']
+        ];
+    }
+
+    /**
+     * Delete user's data in auth_xxx tables
+     *
+     * @param $id
+     */
+    private function deleteAuthData($id) {
+        // find all auth table
+        $tables = $this->getAuthTables();
+        // true if something has been deleted
+        // false if nothing is deleted
+        $deleteSuccess = false;
+
+        // delete by user id
+        foreach ($tables as $table) {
+            try {
+                $sql = "delete from {$table} where id = :id";
+                $statement = $this->pdo->prepare($sql);
+                $statement->bindValue(':id', $id);
+                $result = $statement->execute();
+
+                $deleteSuccess = $deleteSuccess || $result;
+            } catch (\PDOException $e) {
+                echo 'delete auth data';
+                echo $e->getMessage();
+                return false;
+            }
+        }
+        return $deleteSuccess;
+    }
+
+    /**
      * Delete User
      *
      * @param $user Username
@@ -856,12 +929,18 @@ class paperclipDAO
      */
     public function deleteUser($user) {
         try {
+            $info = $this->getUserDataCore($user);
+            $userid = $info['id'];
+
             $sql = "delete from " . $this->settings['usersinfo'] . " where username = :username";
-            $statement = $this->pdo-prepare($sql);
+            $statement = $this->pdo->prepare($sql);
             $statement->bindValue(':username', $user);
             $result = $statement->execute();
 
-            return $result;
+            // delete auth tables from this table
+            $delAuth = $this->deleteAuthData($userid);
+
+            return $result && $delAuth;
         } catch (\PDOException $e) {
             echo 'deleteUser';
             echo $e->getMessage();

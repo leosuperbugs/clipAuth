@@ -65,8 +65,35 @@ define('__CONDITIONS__', array(
     'conSummary' => 'summary',
     'conIdentity' => 'identity',
 ));
-
-
+define('__TOOLBAR__', array(
+    'bold' => 0,
+    'italic' => 1,
+    'underline' => 2,
+    'mono' => 3,
+    'strike' => 4,
+    'hequal' => 5,
+    'hminus' => 6,
+    'hplus' => 7,
+    'h' => 8,
+    'h1' => 0,
+    'h2' => 1,
+    'h3' => 2,
+    'h4' => 3,
+    'h5' => 4,
+    'innerlink' => 9,
+    'outlink' => 10,
+    'ol' => 11,
+    'ul' => 12,
+    'hr' => 13,
+    'pic' => 14,
+    'smiley' => 15,
+    'chars' => 16,
+    'sig' => 17
+));
+define('__TOOLBAR__STATE__', array(
+    'no' => 1,
+    'yes' => 2
+));
 class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 {
 //    private $pdo;
@@ -79,16 +106,22 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     // The order in the result of HTML register output form
 
     private $order;
-
+    private $redis;
+    private $toolbarflag;
     // paperclip's own DAO
     private $dao;
     public function __construct()
     {
+        require  dirname(__FILE__).'/../settings.php';
         $this->editperpage = $this->getConf('editperpage');
         $this->replyperpage = $this->getConf('commentperpage');
-
+        $this->redis = new \Redis();
+        $this->redis->connect($this->settings['rhost'], $this->settings['rport']);
+        $this->redis->auth($this->settings['rpassword']);
+        $this->toolbarflag = $this->redis->get('toolbarflag');
+        if (!$this->toolbarflag) 
+            $this->toolbarflag = __TOOLBAR__STATE__['no'];
         $this->dao = new dokuwiki\paperclip\paperclipDAO();
-        require  dirname(__FILE__).'/../settings.php';
         $dsn = "mysql:host=".$this->settings['host'].
             ";dbname=".$this->settings['dbname'].
             ";port=".$this->settings['port'].
@@ -175,6 +208,12 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             $this, 'login_form_handler'
         );
         $controller->register_hook(
+            'COMMON_USER_LINK',
+            'AFTER',
+            $this,
+            'modify_user_link'
+        );
+        $controller->register_hook(
             'JS_SCRIPT_LIST',
             'BEFORE',
             $this,'jsList'
@@ -184,7 +223,74 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             'BEFORE',
             $this,'cssList'
         );
+        $controller->register_hook(
+            'TOOLBAR_DEFINE',
+            'AFTER',
+            $this,'toolbarlist',
+            array()
+        );
+        if ($this->toolbarflag == __TOOLBAR__STATE__['no']) {
+            $controller->register_hook(
+                'JS_CACHE_USE',
+                'BEFORE',
+                $this,'jshandler'
+            );
+        }
+        
     }
+
+    public function modify_user_link(Doku_Event &$event, $param) {
+        $data = &$event->data;
+        if ($this->dao) {
+            $info = $this->dao->getUserDataCore($data['username']);
+            if ($info) {
+                $data['userlink'] = $info['name'];
+            }
+        }
+    }
+
+    public function jshandler(Doku_Event $event, $param){
+        $event->preventDefault();
+    }
+    public function toolbarlist(Doku_Event $event, $param){
+        $event->data['italic'] = $event->data[__TOOLBAR__['italic']];
+        $event->data['italic']['icon'] = '/lib/plugins/clipauth/images/italic.png';
+        $event->data['yinyong'] = array(
+            'type'   => 'format',
+            'title'  => '引用',
+            'icon'   => '/lib/plugins/clipauth/images/yinyong.png',
+            'open'   => '>',
+            'close'   => '',
+            'block'  => true
+        );
+        $event->data['h1'] = $event->data[__TOOLBAR__['h']]['list'][__TOOLBAR__['h1']];
+        $event->data['h1']['icon'] = '/lib/plugins/clipauth/images/h1.png';
+        $event->data['h2'] = $event->data[__TOOLBAR__['h']]['list'][__TOOLBAR__['h2']];
+        $event->data['h2']['icon'] = '/lib/plugins/clipauth/images/h2.png';
+        $event->data['h3'] = $event->data[__TOOLBAR__['h']]['list'][__TOOLBAR__['h3']];
+        $event->data['h3']['icon'] = '/lib/plugins/clipauth/images/h3.png';
+        $event->data['ol'] = $event->data[__TOOLBAR__['ol']];
+        $event->data['ol']['icon'] = '/lib/plugins/clipauth/images/ol.png';
+        $event->data['ul'] = $event->data[__TOOLBAR__['ul']];
+        $event->data['ul']['icon'] = '/lib/plugins/clipauth/images/ul.png';
+        $event->data['pic'] = $event->data[__TOOLBAR__['pic']];
+        $event->data['pic']['icon'] = '/lib/plugins/clipauth/images/pic.png';
+        $event->data['innerlink'] = $event->data[__TOOLBAR__['innerlink']];
+        $event->data['innerlink']['icon'] = '/lib/plugins/clipauth/images/innerlink.png';
+        $event->data['outlink'] = $event->data[__TOOLBAR__['outlink']];
+        $event->data['outlink']['icon'] = '/lib/plugins/clipauth/images/outlink.png';
+        $event->data['outlink'] = $event->data[__TOOLBAR__['outlink']];
+        $event->data['outlink']['icon'] = '/lib/plugins/clipauth/images/outlink.png';
+        $event->data['outlink'] = $event->data[__TOOLBAR__['outlink']];
+        $event->data['outlink']['icon'] = '/lib/plugins/clipauth/images/outlink.png';
+        $event->data['chars'] = $event->data[__TOOLBAR__['chars']];
+        $event->data['chars']['icon'] = '/lib/plugins/clipauth/images/chars.png';
+        foreach (__TOOLBAR__ as $k => $v) {
+            unset($event->data[$v]);
+        }
+        $this->toolbarflag = __TOOLBAR__STATE__['yes'];
+        $this->redis->set('toolbarflag', $this->toolbarflag);
+    } 
 
     public function jsList(Doku_Event $event, $param){
         $event->data[] = DOKU_INC.'lib/plugins/clipauth/flatpicker.js';
@@ -1340,12 +1446,27 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     public function handle_tpl_content_display(Doku_Event $event, $param)
     {
         // Dispatch the customized behavior based on _GET
-        global $_GET, $ACT;
+        global $_GET, $ACT, $ID;
         $show = $_GET['show'];
         global $USERINFO, $conf, $QUERY, $INFO;
         $username = $INFO['client'];
         $pagenum = $_GET['page'];
 
+        if ($ACT == 'edit' || $ACT == 'preview') {
+            $indexForShow = '';
+            $this->processPageID($ID, $indexForShow);
+            $indexArr = explode(':', $ID);
+            $title = $indexArr[count($indexArr)-1];
+            print "<div class='paperclip__edit__header'>{$this->getLang('editheader')}
+                        <div class='paperclip__editlog__index'>
+                            {$this->getLang('editindex')}：<span class='paperclip__link'>$indexForShow</span>
+                        </div>
+                    </div>
+                    <div class='paperclip__edittitle'>$title
+                    </div>
+
+                    ";
+        }
         if ($show === 'editlog') {
             $event->data = '';
             // A little bit wired here, need fix
@@ -1393,6 +1514,8 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 
     /**
      * Author: Max Qian
+     * Modified by Mark T. Nie
+     *
      * Used to handle the mail verification
      *
      * @param Doku_Event $event
@@ -1409,7 +1532,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
       if ($code && $mail) {
 
         // retrieve data
-        $result = $this->dao->getUserDataByEmail($mail);
+        $result = $this->dao->getUserDataByEmailCore($mail);
 
         if ($result === false) { // invalid $mail
 
