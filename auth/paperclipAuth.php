@@ -103,7 +103,9 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
             $servicename = base64_decode($servicename, true);
 
             if ($USERINFO = $this->dao->getUserDataCore($cookieuser)) {
-                $_SERVER['REMOTE_USER'] = $USERINFO['name'];
+                // username is in database
+                // login user if previous loged-in
+                $_SERVER['REMOTE_USER'] = $cookieuser;
                 return $USERINFO;
             }
         }
@@ -124,6 +126,8 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
                     // Varify the session
                     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                     // Should be enabled in the future
+                    // Error here, use Redis instead!
+
 //                if (empty($_GET['state']) || ($_GET['state'] !== rtrim($_SESSION['oauth2state'], '#wechat_redirect'))) {
 //
 //                    unset($_SESSION['oauth2state']);
@@ -131,58 +135,55 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
 //
 //                }
 
-                    // Get user data from wechat
-                    // First, get access token from code
-                    $authOAuthData = [];
-                    $accessToken = $hlp->getAccessToken();
-                    $values = $accessToken->getValues();
-                    $authOAuthData['accessToken'] = $accessToken->getToken();
-                    $authOAuthData['refreshToken'] = $accessToken->getRefreshToken();
-                    $authOAuthData['open_id'] = $values['openid'];
-                    $authOAuthData['union_id'] = $values['unionid'];
+                // Get user data from wechat
+                // First, get access token from code
+                $authOAuthData = [];
+                $accessToken = $hlp->getAccessToken();
+                $values = $accessToken->getValues();
+                $authOAuthData['accessToken'] = $accessToken->getToken();
+                $authOAuthData['refreshToken'] = $accessToken->getRefreshToken();
+                $authOAuthData['open_id'] = $values['openid'];
+                $authOAuthData['union_id'] = $values['unionid'];
 
 //                    $username = '';
-                    // Check if user have already registered
-                    if ($username = $this->dao->getOAuthUserByOpenid($this->getConf('wechat'), $values['openid'])) {
-                        // Set user info
-                        $USERINFO = $this->dao->getUserDataCore($authOAuthData['open_id']);
-                        $realname = $USERINFO['name'];
+                // Check if user have already registered
+                if ($username = $this->dao->getOAuthUserByOpenid($this->getConf('wechat'), $values['openid'])) {
+                    // Set user info
+                    $USERINFO = $this->dao->getUserDataCore($authOAuthData['open_id']);
 
-                        $_SERVER['REMOTE_USER'] = $realname;
-                        $this->setUserCookie($authOAuthData['open_id'], $sticky, $this->getConf('wechat'));
+                    $_SERVER['REMOTE_USER'] = $username;
+                    $this->setUserCookie($authOAuthData['open_id'], $sticky, $this->getConf('wechat'));
 
 
-                    }
-                    else {
-                        // Not registered
-                        // get user info
-                        $userinfo = $hlp->getWechatInfo($authOAuthData['accessToken'], $values['openid']);
-                        $authOAuthData['username'] = $userinfo['nickname'];
-                        $username = $userinfo['nickname'];
+                } else {
+                    // Not registered
+                    // get user info
+                    $userinfo = $hlp->getWechatInfo($authOAuthData['accessToken'], $values['openid']);
+                    $authOAuthData['username'] = $userinfo['nickname'];
+                    $username = $userinfo['nickname'];
 
-                        // set default group if no groups specified
-                        $grps = array($conf['defaultgroup']);
-                        $grps = join(',', $grps);
+                    // set default group if no groups specified
+                    $grps = array($conf['defaultgroup']);
+                    $grps = join(',', $grps);
 
-                        // this function is not finished
-                        $addUserCoreResult = $this->dao->addUserCore(
-                            $authOAuthData['open_id'],
-                            null,
-                            $authOAuthData['username'],
-                            null,
-                            $grps,
-                            null
-                        );
-                        $addAuthOAuthResult = $this->dao->addAuthOAuth($authOAuthData, $this->getConf('wechat'));
+                    // this function is not finished
+                    $addUserCoreResult = $this->dao->addUserCore(
+                        $authOAuthData['open_id'],
+                        null,
+                        $authOAuthData['username'],
+                        null,
+                        $grps,
+                        null
+                    );
+                    $addAuthOAuthResult = $this->dao->addAuthOAuth($authOAuthData, $this->getConf('wechat'));
 
-                        // Set cookies
-                        $this->setUserCookie($authOAuthData['open_id'], $sticky, $this->getConf('wechat'));
+                    // Set cookies
+                    $this->setUserCookie($authOAuthData['open_id'], $sticky, $this->getConf('wechat'));
                     }
 
                     return true;
 
-                }
-                // Handle the weibo login
+                } // Handle the weibo login
                 elseif ($isExtLogin === $this->getLang('weibo')) {
 
                 }
@@ -453,7 +454,7 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
     {
         $counter = 0;
         foreach ($users as $user) {
-            if ($this->getUserData($user) !== false) {
+            if ($this->dao->getUserDataCore($user) !== false) {
                 $result = $this->dao->deleteUser($user);
                 if ($result) $counter += 1;
             }
