@@ -19,7 +19,7 @@ define("__NUKED__", 'nuked');
 class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
 {
 
-//    var $pdo;
+    private $redis;
     var $settings;
     var $dao;
 
@@ -44,6 +44,14 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
         $this->cando['external']    = true; // does the module do external auth checking?
         $this->cando['logout']      = true; // can the user logout again? (eg. not possible with HTTP auth)
 
+        require  dirname(__FILE__).'/../settings.php';
+
+        // Redis
+        $this->redis = new \Redis();
+        $this->redis->connect($this->settings['rhost'], $this->settings['rport']);
+        $this->redis->auth($this->settings['rpassword']);
+
+        // SQL Data Access Object
         $this->dao = new dokuwiki\paperclip\paperclipDAO();
 
         $this->success = true;
@@ -157,13 +165,21 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
 
                 } else {
                     // Not registered
+                    // First store the user info into Redis
+                    // Then, user should be redirected to a new form
+
                     // get user info
                     $userinfo = $hlp->getWechatInfo($authOAuthData['accessToken'], $values['openid']);
                     $authOAuthData['username'] = $userinfo['nickname'];
                     $username = $userinfo['nickname'];
 
+                    // store authoauthdata into redis
+                    $this->redis->setex($username, $this->getConf('loginCacheTTL'), json_encode($authOAuthData));
+
+
                     // set default group if no groups specified
-                    $grps = array($conf['defaultgroup']);
+                    // $grps = array($conf['defaultgroup']);
+                    $grps = array($this->getConf('wechatDefaultGrp'));
                     $grps = join(',', $grps);
 
                     // this function is not finished

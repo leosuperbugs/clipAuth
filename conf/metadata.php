@@ -17,6 +17,7 @@ $meta['passMaxLen'] = array('numericopt');
 $meta['fullnameMaxLen'] = array('numericopt');
 $meta['editors'] = array('string');
 $meta['resultperpage'] = array('numericopt');
+$meta['loginCacheTTL'] = array('numericopt');
 //$conf['wechatlink'] = '
 //  https://open.weixin.qq.com/connect/qrconnect?
 //  appid=wxff579daeee2f39e7
