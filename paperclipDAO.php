@@ -141,6 +141,34 @@ class paperclipDAO
         }
     }
 
+    /**
+     * Get record from table auth_oauth using user's id
+     *
+     * @param $third_party
+     * @param $id
+     * @return bool
+     */
+    public function getOAuthUserById($third_party, $id) {
+        try {
+            $sql = "select username from {$this->settings['auth_oauth']} where third_party=:third_party and id=:id";
+            $statement = $this->pdo->prepare($sql);
+            $statement->bindValue(':third_party', $third_party);
+            $statement->bindValue(':id', $id);
+            $statement->execute();
+
+            $result = $statement->fetch(PDO::FETCH_ASSOC);
+            if ($result) {
+                return $result['username'];
+            } else {
+                return false;
+            }
+
+        } catch (\PDOException $e) {
+            echo 'get oauth user by id';
+            echo $e->getMessage();
+            return false;
+        }
+    }
 
     /**
      * Only add user to table userinfo (user or users2 in test env)
@@ -854,7 +882,6 @@ class paperclipDAO
             $statement->bindValue(':identity', $newIdentity);
             $statement->bindValue(':id', $id, PDO::PARAM_INT);
             $result = $statement->execute();
-
             return $result;
         } catch (\PDOException $e) {
             echo 'setUserInfo';

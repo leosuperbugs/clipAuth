@@ -103,6 +103,7 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
         $sticky ? $sticky = true : $sticky = false; //sanity check
 
 
+        // use cookie
         if (isset($_COOKIE[DOKU_COOKIE])) {
             // Check users' cookies
             list($cookieuser, $cookiesticky, $auth, $servicename) = explode('|', $_COOKIE[DOKU_COOKIE]);
@@ -116,6 +117,40 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
                 $_SERVER['REMOTE_USER'] = $cookieuser;
                 return $USERINFO;
             }
+        }
+
+        $bindUsername = $_POST['bind_u'];
+        $bindPassword = $_POST['bind_p'];
+        // check binding form
+        if ($bindUsername && $bindPassword) {
+            // check the user input and do the binding
+            if ($this->checkPass($bindUsername, $bindPassword)) {
+                // user is valid
+                $openid = $USERINFO['username'];
+                $userExistInOAuth = $this->dao->getOAuthUserByOpenid($this->getConf('wechat'), $openid);
+                if ($userExistInOAuth) {
+                    // user has been bind, unnecessary to bind again.
+                    // logout user
+
+                } else {
+                    // Bind user here
+                    $userWechatInfo = $this->redis->get($USERINFO['username']);
+                    if ($userWechatInfo) {
+                        // User info found in redis
+
+                    } else {
+                        // User info not found in redis
+
+                    }
+                }
+
+            } else {
+                // user login attempt failed
+
+            }
+        } else {
+            // user login attempt failed
+
         }
 
         if (empty($user)) {
@@ -177,14 +212,12 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
                         $this->redis->setex($username, $this->getConf('loginCacheTTL'), json_encode($authOAuthData));
 
 
-                        // set default group if no groups specified
-                        // $grps = array($conf['defaultgroup']);
-                        $grps = array($this->getConf('wechatDefaultGrp'));
-                        $grps = join(',', $grps);
-
-
                         // Here we should not save user data into db
-                        // Instead, we just send some cookie
+                        // set default group if no groups specified
+//                        $grps = array($this->getConf('wechatDefaultGrp'));
+//                        $grps = join(',', $grps);
+
+
 //                        $addUserCoreResult = $this->dao->addUserCore(
 //                            $authOAuthData['open_id'],
 //                            null,
@@ -195,6 +228,7 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
 //                        );
 //                        $addAuthOAuthResult = $this->dao->addAuthOAuth($authOAuthData, $this->getConf('wechat'));
 
+                        // Instead, we just send some cookie
                         // Set cookies
                         $this->setUserCookie($authOAuthData['open_id'], $sticky, $this->getConf('wechat'));
 

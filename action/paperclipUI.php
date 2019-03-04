@@ -639,32 +639,32 @@ function loginBindWechatForm($slogan, $bind, $skip) {
 
     print '<div class=paperclip__login>'.NL;
 
+    // Add some slogans
     print "<div class=paperclip__bind>{$slogan}</div>";
 
-    $form = new Doku_Form(array('id' => 'dw__login'));
+    $form = new Doku_Form(array('id' => 'paperclip__bind'));
     $form->startFieldset('');
     $form->addElement('<div class="form__wrapper">');
     $form->addHidden('id', $ID);
     $form->addHidden('do', 'login');
-    // Add some slogans
 
     // Username or mail address
     $firstline = array(
-        form_makeTextField('u', ((!$INPUT->bool('http_credentials')) ? $INPUT->str('u') : ''), '邮箱', 'focus__this', 'block')
+        form_makeTextField('bind_u', ((!$INPUT->bool('http_credentials')) ? $INPUT->str('u') : ''), '邮箱', 'focus__this', 'block')
     );
     addElementsWithWrap($form, $firstline);
 
     // Password
     $secondline = array(
-        form_makePasswordField('p', $lang['pass'], '', 'block')
+        form_makePasswordField('bind_p', $lang['pass'], '', 'block')
     );
     addElementsWithWrap($form, $secondline);
 
     $form->addElement('</div>');
 
     $form->addElement('<div class="button__wrapper">');
-    $form->addElement(form_makeButton('submit', '', $bind));
-    $form->addElement(form_makeButton('submit', '', $skip));
+    $form->addElement(form_makeButton('bind', '', $bind));
+    $form->addElement(form_makeButton('skip', '', $skip));
     $form->addElement('</div>');
     $form->endFieldset();
 
