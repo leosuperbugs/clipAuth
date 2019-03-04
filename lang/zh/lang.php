@@ -28,4 +28,7 @@ $lang['editindex'] = '索引';
 $lang['extlogin'] = '第三方登录';
 $lang['wechatlogin'] = '微信登录';
 $lang['weibologin'] = '微博登录';
+$lang['bindSlogan'] = '绑定现有的账号';
+$lang['bind'] = '绑定';
+$lang['skip'] = '跳过';
 

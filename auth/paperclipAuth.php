@@ -123,78 +123,83 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
             $isExtLogin = $_GET['ext'];
             // login
             if ($isExtLogin) {
-                // External login
-                // Import helper
-                $hlp = $this->loadHelper('clipauth_paperclipHelper');
+                    // External login
+                    // Import helper
+                    $hlp = $this->loadHelper('clipauth_paperclipHelper');
 
-                // Handle the wechat login
-                if ($isExtLogin === $this->getConf('wechat')) {
-                    $code = $_GET['code'];
+                    // Handle the wechat login
+                    if ($isExtLogin === $this->getConf('wechat')) {
+                        $code = $_GET['code'];
 
-                    // Varify the session
-                    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                    // Should be enabled in the future
-                    // Error here, use Redis instead!
+                        // Varify the session
+                        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                        // Should be enabled in the future
+                        // Error here, use Redis instead!
 
-//                if (empty($_GET['state']) || ($_GET['state'] !== rtrim($_SESSION['oauth2state'], '#wechat_redirect'))) {
-//
-//                    unset($_SESSION['oauth2state']);
-//                    exit('Invalid state');
-//
-//                }
+    //                if (empty($_GET['state']) || ($_GET['state'] !== rtrim($_SESSION['oauth2state'], '#wechat_redirect'))) {
+    //
+    //                    unset($_SESSION['oauth2state']);
+    //                    exit('Invalid state');
+    //
+    //                }
 
-                // Get user data from wechat
-                // First, get access token from code
-                $authOAuthData = [];
-                $accessToken = $hlp->getAccessToken();
-                $values = $accessToken->getValues();
-                $authOAuthData['accessToken'] = $accessToken->getToken();
-                $authOAuthData['refreshToken'] = $accessToken->getRefreshToken();
-                $authOAuthData['open_id'] = $values['openid'];
-                $authOAuthData['union_id'] = $values['unionid'];
+                    // Get user data from wechat
+                    // First, get access token from code
+                    $authOAuthData = [];
+                    $accessToken = $hlp->getAccessToken();
+                    $values = $accessToken->getValues();
+                    $authOAuthData['accessToken'] = $accessToken->getToken();
+                    $authOAuthData['refreshToken'] = $accessToken->getRefreshToken();
+                    $authOAuthData['open_id'] = $values['openid'];
+                    $authOAuthData['union_id'] = $values['unionid'];
 
-//                    $username = '';
-                // Check if user have already registered
-                if ($username = $this->dao->getOAuthUserByOpenid($this->getConf('wechat'), $values['openid'])) {
-                    // Set user info
-                    $USERINFO = $this->dao->getUserDataCore($authOAuthData['open_id']);
+    //                    $username = '';
+                    // Check if user have already registered
+                    if ($username = $this->dao->getOAuthUserByOpenid($this->getConf('wechat'), $values['openid'])) {
+                        // Set user info
+                        $USERINFO = $this->dao->getUserDataCore($authOAuthData['open_id']);
 
-                    $_SERVER['REMOTE_USER'] = $username;
-                    $this->setUserCookie($authOAuthData['open_id'], $sticky, $this->getConf('wechat'));
-
-
-                } else {
-                    // Not registered
-                    // First store the user info into Redis
-                    // Then, user should be redirected to a new form
-
-                    // get user info
-                    $userinfo = $hlp->getWechatInfo($authOAuthData['accessToken'], $values['openid']);
-                    $authOAuthData['username'] = $userinfo['nickname'];
-                    $username = $userinfo['nickname'];
-
-                    // store authoauthdata into redis
-                    $this->redis->setex($username, $this->getConf('loginCacheTTL'), json_encode($authOAuthData));
+                        $_SERVER['REMOTE_USER'] = $username;
+                        $this->setUserCookie($authOAuthData['open_id'], $sticky, $this->getConf('wechat'));
 
 
-                    // set default group if no groups specified
-                    // $grps = array($conf['defaultgroup']);
-                    $grps = array($this->getConf('wechatDefaultGrp'));
-                    $grps = join(',', $grps);
+                    } else {
+                        // Not registered
+                        // First store the user info into Redis
+                        // Then, user should be redirected to a new form
 
-                    // this function is not finished
-                    $addUserCoreResult = $this->dao->addUserCore(
-                        $authOAuthData['open_id'],
-                        null,
-                        $authOAuthData['username'],
-                        null,
-                        $grps,
-                        null
-                    );
-                    $addAuthOAuthResult = $this->dao->addAuthOAuth($authOAuthData, $this->getConf('wechat'));
+                        // get user info
+                        $userinfo = $hlp->getWechatInfo($authOAuthData['accessToken'], $values['openid']);
+                        $authOAuthData['username'] = $userinfo['nickname'];
+                        $username = $userinfo['nickname'];
 
-                    // Set cookies
-                    $this->setUserCookie($authOAuthData['open_id'], $sticky, $this->getConf('wechat'));
+                        // store authoauthdata into redis
+                        $this->redis->setex($username, $this->getConf('loginCacheTTL'), json_encode($authOAuthData));
+
+
+                        // set default group if no groups specified
+                        // $grps = array($conf['defaultgroup']);
+                        $grps = array($this->getConf('wechatDefaultGrp'));
+                        $grps = join(',', $grps);
+
+
+                        // Here we should not save user data into db
+                        // Instead, we just send some cookie
+//                        $addUserCoreResult = $this->dao->addUserCore(
+//                            $authOAuthData['open_id'],
+//                            null,
+//                            $authOAuthData['username'],
+//                            null,
+//                            $grps,
+//                            null
+//                        );
+//                        $addAuthOAuthResult = $this->dao->addAuthOAuth($authOAuthData, $this->getConf('wechat'));
+
+                        // Set cookies
+                        $this->setUserCookie($authOAuthData['open_id'], $sticky, $this->getConf('wechat'));
+
+                        // Redirect
+                        header("Location: doku.php?bind=ext");
                     }
 
                     return true;

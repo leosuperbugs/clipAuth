@@ -625,5 +625,50 @@ function loginExternalUI($extloginLang, $wechatLink, $wechatloginLang): string {
     </div>";
 }
 
+/**
+ * Modified login form for wechat login binding
+ * May be duplicated with inc/html.php html_login()
+ * Need some update later
+ *
+ * @return string
+ */
+function loginBindWechatForm($slogan, $bind, $skip) {
+    global $lang;
+    global $ID;
+    global $INPUT;
 
+    print '<div class=paperclip__login>'.NL;
 
+    print "<div class=paperclip__bind>{$slogan}</div>";
+
+    $form = new Doku_Form(array('id' => 'dw__login'));
+    $form->startFieldset('');
+    $form->addElement('<div class="form__wrapper">');
+    $form->addHidden('id', $ID);
+    $form->addHidden('do', 'login');
+    // Add some slogans
+
+    // Username or mail address
+    $firstline = array(
+        form_makeTextField('u', ((!$INPUT->bool('http_credentials')) ? $INPUT->str('u') : ''), '邮箱', 'focus__this', 'block')
+    );
+    addElementsWithWrap($form, $firstline);
+
+    // Password
+    $secondline = array(
+        form_makePasswordField('p', $lang['pass'], '', 'block')
+    );
+    addElementsWithWrap($form, $secondline);
+
+    $form->addElement('</div>');
+
+    $form->addElement('<div class="button__wrapper">');
+    $form->addElement(form_makeButton('submit', '', $bind));
+    $form->addElement(form_makeButton('submit', '', $skip));
+    $form->addElement('</div>');
+    $form->endFieldset();
+
+    html_form('login', $form);
+    print '</div>'.NL;
+
+}

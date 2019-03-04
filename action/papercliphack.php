@@ -85,8 +85,6 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     private $editRecordNum;
     private $replyRecordNum;
     // The order in the result of HTML register output form
-
-    private $order;
     private $redis;
     private $toolbarflag;
     // paperclip's own DAO
@@ -107,17 +105,6 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             $this->toolbarflag = __TOOLBAR__STATE__['no'];
 
         $this->dao = new dokuwiki\paperclip\paperclipDAO();
-//        $dsn = "mysql:host=".$this->settings['host'].
-//            ";dbname=".$this->settings['dbname'].
-//            ";port=".$this->settings['port'].
-//            ";charset=".$this->settings['charset'];
-//
-//        try {
-//            $this->pdo = new PDO($dsn, $this->settings['username'], $this->settings['password']);
-//        } catch ( PDOException $e) {
-//            echo $e->getMessage();
-//            exit;
-//        }
     }
 
     /**
@@ -909,10 +896,8 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         if (!isset($pagenum)) {
             $pagenum = 1;
         }
-        global $ACT, $INFO;
+        global $INFO;
 
-        // Need something to check the identity here
-        // Need Fix !
         if(!$INFO['isadmin']) return;
 
         if ($show === 'admin') {
@@ -1107,6 +1092,23 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     }
 
     /**
+     * Check if this is a binding existing account redirect
+     */
+    private function isBind() {
+        $bind = $_GET['bind'];
+        return ($bind === 'ext');
+    }
+
+    private function bindExistingAccount(Doku_Event $event) {
+        $slogan = $this->getLang('bindSlogan');
+        $bind = $this->getLang('bind');
+        $skip = $this->getLang('skip');
+        loginBindWechatForm($slogan, $bind, $skip);
+
+        $event->preventDefault();
+    }
+
+    /**
      *
      * Dispatching inside this plugin
      * Most of them are for customization
@@ -1133,9 +1135,9 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         elseif ($this->isAdmin($show, $ACT)) {
             $this->showAdminContent();
         }
-//        else if () {
-//
-//        }
+        elseif ($this->isBind()) {
+            $this->bindExistingAccount($event);
+        }
     }
 
     public function changeLink(Doku_Event &$event, $param)
@@ -1143,6 +1145,46 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         if($event->data['view'] != 'user') return;
     }
 
+    /**
+     * Verify user's mail
+     * User click to here from links in email
+     *
+     * Author: Max Qian
+     * Modified by Mark T. Nie
+     *
+     * @param $mail
+     * @param $code
+     */
+    private function mailVerification($mail, $code) {
+        // retrieve data
+        $result = $this->dao->getUserDataByEmailCore($mail);
+
+        if ($result === false) { // invalid $mail
+
+            header('Location: doku.php?id=start&do=register');
+        } else if ($result['verifycode'] !== $code) { //invalid $verifycode
+
+            header('Location: doku.php');
+        } else { // valid input
+
+            function filter_cb( $var ) {
+                global $conf;
+                return $var !== $conf['defaultgroup'];
+            }
+
+            // modify grps
+            $result['grps'][] = 'user';
+
+            // filter @ALL (default group)
+            $grps =  implode(",", array_filter($result['grps'], "filter_cb"));
+
+            // modify db
+            $this->dao->setUserGroup($result['id'], $grps);
+
+            //redirect
+            header('Location: doku.php');
+        }
+    }
     /**
      * Author: Max Qian
      * Modified by Mark T. Nie
@@ -1161,45 +1203,29 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 
       // verification code
       if ($code && $mail) {
-
-        // retrieve data
-        $result = $this->dao->getUserDataByEmailCore($mail);
-
-        if ($result === false) { // invalid $mail
-
-          header('Location: doku.php?id=start&do=register');
-        } else if ($result['verifycode'] !== $code) { //invalid $verifycode
-
-          header('Location: doku.php');
-        } else { // valid input
-
-          function filter_cb( $var ) {
-            global $conf;
-            return $var !== $conf['defaultgroup'];
-          }
-
-          // modify grps
-          $result['grps'][] = 'user';
-
-          // filter @ALL (default group)
-          $grps =  implode(",", array_filter($result['grps'], "filter_cb"));
-
-          // modify db
-          $this->dao->setUserGroup($result['id'], $grps);
-
-          //redirect
-          header('Location: doku.php');
-        }
+          $this->mailVerification($mail, $code);
       }
     }
 
+    /**
+     * Inject some extra UI for external login in the login form
+     *
+     * @return string
+     */
     private function externalLoginUI() {
-        // Make up the link
-        $hlp = $this->loadHelper('clipauth_paperclipHelper');
-        $wechatLink = $hlp->getAuthURL();
-        $extloginLang = $this->getLang('extlogin');
-        $wechatloginLang = $this->getLang('wechatlogin');
-        return loginExternalUI($extloginLang, $wechatLink, $wechatloginLang);
+        $bind = $_GET['bind'];
+        if ($bind) {
+            // Should not add login form
+            // when login form is shown at binding page
+            return '';
+        } else {
+            // Make up the link
+            $hlp = $this->loadHelper('clipauth_paperclipHelper');
+            $wechatLink = $hlp->getAuthURL();
+            $extloginLang = $this->getLang('extlogin');
+            $wechatloginLang = $this->getLang('wechatlogin');
+            return loginExternalUI($extloginLang, $wechatLink, $wechatloginLang);
+        }
     }
 
     /**
