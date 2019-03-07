@@ -642,11 +642,17 @@ function loginBindWechatForm($slogan, $bind, $skip) {
     // Add some slogans
     print "<div class=paperclip__bind>{$slogan}</div>";
 
+    // I need another form here
+    $skipForm = new Doku_Form(array('id' => 'paperclip__skip'));
+    $skipForm->startFieldset('');
+    $skipForm->addHidden('skip', 'skip');
+    $skipForm->endFieldset();
+    html_form('skip', $skipForm);
+
     $form = new Doku_Form(array('id' => 'paperclip__bind'));
     $form->startFieldset('');
     $form->addElement('<div class="form__wrapper">');
     $form->addHidden('id', $ID);
-    $form->addHidden('do', 'login');
 
     // Username or mail address
     $firstline = array(
@@ -663,8 +669,8 @@ function loginBindWechatForm($slogan, $bind, $skip) {
     $form->addElement('</div>');
 
     $form->addElement('<div class="button__wrapper">');
-    $form->addElement(form_makeButton('bind', '', $bind));
-    $form->addElement(form_makeButton('skip', '', $skip));
+    $form->addElement(form_makeButton('submit', '', $bind));
+    $form->addElement(form_makeButton('cancel', '', $skip, array('form' => 'paperclip__skip')));
     $form->addElement('</div>');
     $form->endFieldset();
 

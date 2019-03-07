@@ -149,6 +149,33 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
                 // is binding
                 $bindUsername = $_POST['bind_u'];
                 $bindPassword = $_POST['bind_p'];
+                // is skipping?
+                if ($_POST['skip']) {
+                    // create account according to wechat info
+                    // userinfo
+                    $grps = $this->getConf('wechatDefaultGrp');
+
+                    $userWechatInfo = json_decode($this->redis->get($cookieuser), true);
+                    $this->dao->addUserCore(
+                        $userWechatInfo['open_id'],
+                        '',
+                        $userWechatInfo['realname'],
+                        '',
+                        $grps,
+                        '');
+                    // auth info
+                    $this->dao->addAuthOAuth($userWechatInfo, $this->getConf('wechat'));
+                    // delete temp cookies
+                    setcookie(__EXT__TEMP__, null, 0);
+                    header("Location: doku.php");
+                    // set cookies
+                    $this->setUserCookie(
+                        $userWechatInfo['open_id'],
+                        $sticky,
+                        $this->getConf('wechat'));
+                    // login successfully
+                    return true;
+                }
                 // do the binding
                 if ($bindUsername && $bindPassword) {
                     // user submitted the binding form
