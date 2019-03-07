@@ -31,4 +31,6 @@ $lang['weibologin'] = '微博登录';
 $lang['bindSlogan'] = '绑定现有的账号';
 $lang['bind'] = '绑定';
 $lang['skip'] = '跳过';
-
+$lang['alreadyBind'] = '该微信账户已经被绑定';
+$lang['noSpaceToBind'] ='该账户已绑定过微信';
+$lang['noExtAccount'] = '没有可以用来绑定的账户，请重试';

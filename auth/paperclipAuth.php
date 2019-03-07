@@ -15,6 +15,14 @@ define("__SEC__DAY__", 86400);
 define("__MUTED__", 'muted');
 define("__NUKED__", 'nuked');
 
+// cookies
+define("__EXT__TEMP__", 'TEMP');
+
+// bind
+define("BIND__DIR", "doku?bind=ext");
+define("LOGIN__DIR", "doku?do=login");
+define("__TEMP__EXPIRE__", 60);
+
 
 class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
 {
@@ -65,6 +73,8 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
     // }
 
     /**
+     * Set cookies, $USERINFO, remote_user and session
+     *
      * @param string $user
      * @param bool   $sticky
      * @param string $servicename
@@ -72,19 +82,42 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
      */
     private function setUserCookie($user, $sticky, $servicename, $validityPeriodInSeconds = 31536000) {
         global $USERINFO;
-        global $auth;
 
+        $_SERVER['REMOTE_USER'] = $user;
+        // get the basic info
+        $info = $this->dao->getUserDataCore($user);
+        if ($info) {
+            // formal cookie and login state
+            $USERINFO = $info;
+        } else {
+            // informal cookie (temple, valid for 60s)
+            $USERINFO['name'] = $user;
+        }
+        $_SESSION[DOKU_COOKIE]['auth']['user'] = $user;
+        $_SESSION[DOKU_COOKIE]['auth']['info'] = $USERINFO;
+
+        // set cookies
         $cookie = base64_encode($user).'|'.((int) $sticky).'|'.base64_encode('oauth').'|'.base64_encode($servicename);
         $cookieDir = empty($conf['cookiedir']) ? DOKU_REL : $conf['cookiedir'];
         $time      = $sticky ? (time() + $validityPeriodInSeconds) : 0;
         setcookie(DOKU_COOKIE,$cookie, $time, $cookieDir, '',($conf['securecookie'] && is_ssl()), true);
-
-        $_SERVER['REMOTE_USER'] = $user;
-        $_SESSION[DOKU_COOKIE]['auth']['user'] = $user;
-//                    $_SESSION[DOKU_COOKIE]['auth']['pass'] = $pass;
-        $_SESSION[DOKU_COOKIE]['auth']['info'] = $USERINFO;
-        $USERINFO = $this->dao->getUserDataCore($user);
     }
+
+    /**
+     * Set a cookie to mark user as template user
+     * Need to be redirect to the bind page to remove this cookie
+     *
+     * @param $user
+     * @param $servicename
+     * @param int $validityPeriodInSeconds
+     */
+    private function setTempCookie($validityPeriodInSeconds = 31536000) {
+        $cookie = 'true';
+        $time = time() + $validityPeriodInSeconds;
+        $cookieDir = empty($conf['cookiedir']) ? DOKU_REL : $conf['cookiedir'];
+        setcookie(__EXT__TEMP__, $cookie, $time, $cookieDir,  '', ($conf['securecookie'] && is_ssl()), true);
+    }
+
 
     /**
      * Do all authentication [ OPTIONAL ]
@@ -97,153 +130,183 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
      */
     public function trustExternal($user, $pass, $sticky = false)
     {
-
         global $USERINFO;
-        global $conf;
+        global $lang;
         $sticky ? $sticky = true : $sticky = false; //sanity check
 
 
         // use cookie
         if (isset($_COOKIE[DOKU_COOKIE])) {
-            // Check users' cookies
+            // decode cookies
             list($cookieuser, $cookiesticky, $auth, $servicename) = explode('|', $_COOKIE[DOKU_COOKIE]);
             $cookieuser = base64_decode($cookieuser, true);
             $auth = base64_decode($auth, true);
             $servicename = base64_decode($servicename, true);
+            $USERINFO['name'] = $cookieuser;
 
-            if ($USERINFO = $this->dao->getUserDataCore($cookieuser)) {
-                // username is in database
-                // login user if previous loged-in
-                $_SERVER['REMOTE_USER'] = $cookieuser;
-                return $USERINFO;
-            }
-        }
+            // using temp cookies?
+            if (isset($_COOKIE[__EXT__TEMP__])) {
+                // is binding
+                $bindUsername = $_POST['bind_u'];
+                $bindPassword = $_POST['bind_p'];
+                // do the binding
+                if ($bindUsername && $bindPassword) {
+                    // user submitted the binding form
+                    // check the user input and do the binding
+                    if ($this->checkPass($bindUsername, $bindPassword)) {
+                        // user is valid
+                        // check if this user has already had an account
+                        $userCoreInfo = $this->dao->getUserDataCore($bindUsername);
+                        if ($userCoreInfo) {
+                            $userid = $userCoreInfo['id'];
+                            $userHasNOTBindExtAccount = !($this->dao->getOAuthUserById($this->getConf('wechat'),$userid));
+                            if ($userHasNOTBindExtAccount) {
+                                // user has not bind a wechat account yet
+                                $openid = $USERINFO['name'];
+                                // does wechat info exist in Redis
+                                $userExistInOAuth = $this->dao->getOAuthUserByOpenid($this->getConf('wechat'), $openid);
+                                if ($userExistInOAuth) {
+                                    // !!!ERROR!!!
+                                    // wechat account has been bind, unnecessary to bind again.
+                                    // send error msg
+                                    msg($this->getLang('alreadyBind'), -1);
+                                    // Go back to login
+                                    header("Location: ".LOGIN__DIR);
 
-        $bindUsername = $_POST['bind_u'];
-        $bindPassword = $_POST['bind_p'];
-        // check binding form
-        if ($bindUsername && $bindPassword) {
-            // check the user input and do the binding
-            if ($this->checkPass($bindUsername, $bindPassword)) {
-                // user is valid
-                $openid = $USERINFO['username'];
-                $userExistInOAuth = $this->dao->getOAuthUserByOpenid($this->getConf('wechat'), $openid);
-                if ($userExistInOAuth) {
-                    // user has been bind, unnecessary to bind again.
-                    // logout user
+                                    return false;
+                                }
+                                else {
+                                    // wechat account hasn't been bind yet
+                                    // bind user here
+                                    // fetch user's wechat info from redis
+                                    $userWechatInfo = json_decode($this->redis->get($USERINFO['name']), true);
+                                    if ($userWechatInfo) {
+                                        // CORRECT
+                                        // User info found in redis
+                                        // username should be the dokuwiki's username when an wechat account is binding to it
+                                        $userWechatInfo['username'] = $bindUsername;
+                                        // Create oauth info in DB
+                                        $addAuthOAuthResult = $this->dao->addAuthOAuth($userWechatInfo, $this->getConf('wechat'), $userid);
+                                        // Delete Temp Cookie
+                                        setcookie(__EXT__TEMP__, null, 0);
+                                        // Set formal cookie and remote user
+                                        $this->setUserCookie($bindUsername, $sticky, $this->getConf('wechat'));
+                                        // return true
+                                        return $addAuthOAuthResult;
+                                    }
+                                    else {
+                                        // !!!ERROR!!!
+                                        // User info not found in redis
+                                        // Delete Temp Cookie
+                                        setcookie(__EXT__TEMP__, null, 0);
+                                        // sent error msg
+                                        msg($this->getLang('noExtAccount'), -1);
+                                        // Go back to login
+                                        header("Location: ".LOGIN__DIR);
+                                        // login should fail
+                                        return false;
+                                    }
+                                }
+                            }
+                            else {
+                                //!!!ERROR!!!
+                                // user has bind a same kind of ext account to it
+                                msg($this->getLang('noSpaceToBind'), -1);
+                                // go to login page
+                                header("Location: ".LOGIN__DIR);
 
-                } else {
-                    // Bind user here
-                    $userWechatInfo = $this->redis->get($USERINFO['username']);
-                    if ($userWechatInfo) {
-                        // User info found in redis
+                                return false;
+                            }
+                        }
+                        }
 
-                    } else {
-                        // User info not found in redis
+                    else {
+                        // !!!ERROR!!!
+                        // user binding attempt failed because of wrong username or password
+                        msg($lang['badlogin'], -1);
 
+                        // redirect to binding page
+                        header("Location: ".BIND__DIR);
+
+                        return true;
                     }
                 }
-
-            } else {
-                // user login attempt failed
-
+                // using temp cookies but not binding
+                // refuse to login
+                return false;
             }
-        } else {
-            // user login attempt failed
-
-        }
-
-        if (empty($user)) {
-            // do the checking here
-            $isExtLogin = $_GET['ext'];
-            // login
-            if ($isExtLogin) {
-                    // External login
-                    // Import helper
-                    $hlp = $this->loadHelper('clipauth_paperclipHelper');
-
-                    // Handle the wechat login
-                    if ($isExtLogin === $this->getConf('wechat')) {
-                        $code = $_GET['code'];
-
-                        // Varify the session
-                        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                        // Should be enabled in the future
-                        // Error here, use Redis instead!
-
-    //                if (empty($_GET['state']) || ($_GET['state'] !== rtrim($_SESSION['oauth2state'], '#wechat_redirect'))) {
-    //
-    //                    unset($_SESSION['oauth2state']);
-    //                    exit('Invalid state');
-    //
-    //                }
-
-                    // Get user data from wechat
-                    // First, get access token from code
-                    $authOAuthData = [];
-                    $accessToken = $hlp->getAccessToken();
-                    $values = $accessToken->getValues();
-                    $authOAuthData['accessToken'] = $accessToken->getToken();
-                    $authOAuthData['refreshToken'] = $accessToken->getRefreshToken();
-                    $authOAuthData['open_id'] = $values['openid'];
-                    $authOAuthData['union_id'] = $values['unionid'];
-
-    //                    $username = '';
-                    // Check if user have already registered
-                    if ($username = $this->dao->getOAuthUserByOpenid($this->getConf('wechat'), $values['openid'])) {
-                        // Set user info
-                        $USERINFO = $this->dao->getUserDataCore($authOAuthData['open_id']);
-
-                        $_SERVER['REMOTE_USER'] = $username;
-                        $this->setUserCookie($authOAuthData['open_id'], $sticky, $this->getConf('wechat'));
-
-
-                    } else {
-                        // Not registered
-                        // First store the user info into Redis
-                        // Then, user should be redirected to a new form
-
-                        // get user info
-                        $userinfo = $hlp->getWechatInfo($authOAuthData['accessToken'], $values['openid']);
-                        $authOAuthData['username'] = $userinfo['nickname'];
-                        $username = $userinfo['nickname'];
-
-                        // store authoauthdata into redis
-                        $this->redis->setex($username, $this->getConf('loginCacheTTL'), json_encode($authOAuthData));
-
-
-                        // Here we should not save user data into db
-                        // set default group if no groups specified
-//                        $grps = array($this->getConf('wechatDefaultGrp'));
-//                        $grps = join(',', $grps);
-
-
-//                        $addUserCoreResult = $this->dao->addUserCore(
-//                            $authOAuthData['open_id'],
-//                            null,
-//                            $authOAuthData['username'],
-//                            null,
-//                            $grps,
-//                            null
-//                        );
-//                        $addAuthOAuthResult = $this->dao->addAuthOAuth($authOAuthData, $this->getConf('wechat'));
-
-                        // Instead, we just send some cookie
-                        // Set cookies
-                        $this->setUserCookie($authOAuthData['open_id'], $sticky, $this->getConf('wechat'));
-
-                        // Redirect
-                        header("Location: doku.php?bind=ext");
-                    }
-
+            else {
+                // check cookies is in database
+                if ($USERINFO = $this->dao->getUserDataCore($cookieuser)) {
+                    // username is in database
+                    // login user if previous logged-in
+                    $_SERVER['REMOTE_USER'] = $cookieuser;
                     return true;
-
-                } // Handle the weibo login
-                elseif ($isExtLogin === $this->getLang('weibo')) {
-
                 }
             }
         }
+
+        // not using cookie
+        // or cookies not in database
+        $isExtLogin = $_GET['ext'];
+        // trying to do external login
+        if (empty($user) && $isExtLogin) {
+            // External login
+            // Import helper
+            $hlp = $this->loadHelper('clipauth_paperclipHelper');
+
+            // Handle the wechat login
+            if ($isExtLogin === $this->getConf('wechat')) {
+                // Varify the session
+                // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                // Should be enabled in the future
+                // Error here, use Redis instead!
+
+                //                if (empty($_GET['state']) || ($_GET['state'] !== rtrim($_SESSION['oauth2state'], '#wechat_redirect'))) {
+                //
+                //                    unset($_SESSION['oauth2state']);
+                //                    exit('Invalid state');
+                //
+                //                }
+
+                // Get user data from wechat
+                // First, get access token from code
+                $authOAuthData = [];
+                $accessToken = $hlp->getAccessToken();
+                $values = $accessToken->getValues();
+                $authOAuthData['accessToken'] = $accessToken->getToken();
+                $authOAuthData['refreshToken'] = $accessToken->getRefreshToken();
+                $authOAuthData['open_id'] = $values['openid'];
+                $authOAuthData['union_id'] = $values['unionid'];
+
+                // Check if user have already registered
+                if ($username = $this->dao->getOAuthUserByOpenid($this->getConf('wechat'), $values['openid'])) {
+                    // Set user info
+                    $this->setUserCookie($username, $sticky, $this->getConf('wechat'));
+                    return true;
+                } else {
+                    // Not registered
+                    // get user info from wechat
+                    $userinfo = $hlp->getWechatInfo($authOAuthData['accessToken'], $values['openid']);
+                    $authOAuthData['realname'] = $userinfo['nickname']; // used when skip binding
+                    $username = $userinfo['openid'];
+                    // store authoauthdata into redis
+                    $this->redis->setex($username, $this->getConf('loginCacheTTL'), json_encode($authOAuthData));
+                    // set a temple cookie
+                    $this->setUserCookie($authOAuthData['open_id'], true, $this->getConf('wechat'), __TEMP__EXPIRE__);
+                    $this->setTempCookie(__TEMP__EXPIRE__);
+                    // Redirect
+                    header("Location: doku.php?bind=ext");
+                    return true;
+                }
+
+
+            } // Handle the weibo login
+            elseif ($isExtLogin === $this->getLang('weibo')) {
+                return false;
+            }
+        }
+
         return auth_login($user, $pass, $sticky);
     }
 

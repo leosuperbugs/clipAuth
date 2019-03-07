@@ -90,8 +90,18 @@ class paperclipDAO
         }
     }
 
-    public function addAuthOAuth($data, $third_party) {
-        $id = $this->getUserID($data['open_id']);
+    public function addAuthOAuth($data, $third_party, $id = null) {
+        // provide id when binding
+        if ($id) {
+            // binding
+            // should use the original name of the dokuwiki account
+            $username = $data['username'];
+        } else {
+            // not binding
+            $username = $data['open_id'];
+            $id = $this->getUserID($data['open_id']);
+        }
+        $openid = $data['open_id'];
         $sql = "insert into {$this->settings['auth_oauth']} (
                     id, username, third_party, credential, 
                     refresh_token, union_id, open_id, create_time, refresh_time)
@@ -102,12 +112,12 @@ class paperclipDAO
         $statement = $this->pdo->prepare($sql);
 
         $statement->bindValue(":id", $id, PDO::PARAM_INT);
-        $statement->bindValue(":username", $data['open_id']);
+        $statement->bindValue(":username", $username);
         $statement->bindValue(":third_party", $third_party);
         $statement->bindValue(":accessToken", $data['accessToken']);
         $statement->bindValue(":refreshToken", $data['refreshToken']);
         $statement->bindValue(":union_id", $data['union_id']);
-        $statement->bindValue(":open_id", $data['open_id']);
+        $statement->bindValue(":open_id", $openid);
 
         $result = $statement->execute();
 
@@ -153,7 +163,7 @@ class paperclipDAO
             $sql = "select username from {$this->settings['auth_oauth']} where third_party=:third_party and id=:id";
             $statement = $this->pdo->prepare($sql);
             $statement->bindValue(':third_party', $third_party);
-            $statement->bindValue(':id', $id);
+            $statement->bindValue(':id', $id, PDO::PARAM_INT);
             $statement->execute();
 
             $result = $statement->fetch(PDO::FETCH_ASSOC);
