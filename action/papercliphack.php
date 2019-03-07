@@ -10,36 +10,17 @@ use Green\Request\V20180509 as Green;
 
 require dirname(__FILE__).'/../vendor/autoload.php';
 
-use \dokuwiki\Form\Form;
 use \dokuwiki\Ui;
 use \dokuwiki\paperclip;
 use Caxy\HtmlDiff\HtmlDiff;
 
 include dirname(__FILE__).'/../paperclipDAO.php';
-include dirname(__FILE__).'/../paperclipCache.php';
-//include dirname(__FILE__).'/../helper/paperclipHelper.php';
-
 
 // must be run within Dokuwiki
 if (!defined('DOKU_INC')) {
     die();
 }
 
-// for personal center
-// show = xxx
-define('__CLIP__EDIT__', 0);
-define('__CLIP__COMMENT__', 1);
-define('__CLIP__SETTING__', 2);
-// for search result
-define('__CLIP__TITLE__', 3);
-define('__CLIP__FULLTEXT__', 4);
-// for admin console
-define('__CLIP__ALLEDIT__', 5);
-define('__CLIP__ALLCOM__', 6);
-define('__CLIP__ADMIN__', 7);
-
-define('__NAVBARSETTING__', array('最近编辑', '评论/回复', '设置', '条目名称搜索', '条目内容搜索', '词条更新日志', '用户评论日志', '管理'));
-define('__HREFSETTING__', array('editlog', 'comment', 'setting', 'title', 'fulltext', 'alledit', 'allcom', 'admin'));
 // The position of the metadata in the register form
 define('__REGISTER_ORDER__', array(
     'invitationCode'=> 2,
@@ -104,8 +85,6 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     private $editRecordNum;
     private $replyRecordNum;
     // The order in the result of HTML register output form
-
-    private $order;
     private $redis;
     private $toolbarflag;
     // paperclip's own DAO
@@ -115,24 +94,17 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         require  dirname(__FILE__).'/../settings.php';
         $this->editperpage = $this->getConf('editperpage');
         $this->replyperpage = $this->getConf('commentperpage');
+
         $this->redis = new \Redis();
         $this->redis->connect($this->settings['rhost'], $this->settings['rport']);
         $this->redis->auth($this->settings['rpassword']);
-        $this->toolbarflag = $this->redis->get('toolbarflag');
-        if (!$this->toolbarflag) 
-            $this->toolbarflag = __TOOLBAR__STATE__['no'];
-        $this->dao = new dokuwiki\paperclip\paperclipDAO();
-        $dsn = "mysql:host=".$this->settings['host'].
-            ";dbname=".$this->settings['dbname'].
-            ";port=".$this->settings['port'].
-            ";charset=".$this->settings['charset'];
 
-        try {
-            $this->pdo = new PDO($dsn, $this->settings['username'], $this->settings['password']);
-        } catch ( PDOException $e) {
-            echo $e->getMessage();
-            exit;
-        }
+        // For js cache
+        $this->toolbarflag = $this->redis->get('toolbarflag');
+        if (!$this->toolbarflag)
+            $this->toolbarflag = __TOOLBAR__STATE__['no'];
+
+        $this->dao = new dokuwiki\paperclip\paperclipDAO();
     }
 
     /**
@@ -368,8 +340,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             $editorList = '';
             $count = $this->dao->getEditorNames($editorList);
 
-            echo "<h1>$editorTitle<div class='paperclip__editbtn__wrapper'><span>$count 人</span></div></h1>";
-            echo "<p>$editorList</p>";
+            echo entryEditorCredit($editorTitle, $count, $editorList);
         }
     }
     /**
@@ -388,7 +359,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
      */
     public function modifyEditFormAfter(Doku_Event& $event, $param)
     {
-        print '<noscript>您的浏览器未启用脚本，请启用后重试！</noscript>';
+        print noScript();
     }
 
     /**
@@ -467,7 +438,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         $indexArray = explode(':', $pageid);
         $mainPageName = $indexArray[count($indexArray) - 1];
         $indexForShow = array_reverse($indexArray);
-        $indexForShow = implode('</span>-<span class="paperclip__link">', $indexForShow);
+        $indexForShow = implode(adminPageidGlue(), $indexForShow);
         return $mainPageName;
     }
     /**
@@ -485,33 +456,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         if ($pageid) {
             $mainPageName = $this->processPageID($pageid, $indexForShow);
         }
-        $time   = $editData['time'];
-        $summary= $editData['summary'];
-        $editor = $editData['editor'];
-
-        print "
-<div class='paperclip__editlog__unit'>
-    <hr class='paperclip__editlog__split $needHide'>
-    <div class='paperclip__editlog__header'>
-        <div class='paperclip__editlog__pageid'>
-           $mainPageName
-        </div>
-        <div class='paperclip__editlog__time'>
-            最后的编辑时间为 $time .
-        </div>
-    </div>
-    <p class='paperclip__editlog__sum'>
-        详情： $summary
-    </p>
-    <div class='paperclip__editlog__footer'>
-        <a class='paperclip__editlog__link' href='/doku.php?id=$pageid&do=edit' target='_blank'>继续编辑</a>
-        <a class='paperclip__editlog__link' href='/doku.php?id=$pageid' target='_blank'>查看当前条目</a>
-        <div class='paperclip__editlog__index'>
-            索引：<span class='paperclip__link'>$indexForShow</span>
-        </div>
-    </div>
-</div>
-        ";
+        print adminEditlogUnit($needHide, $mainPageName, $editData, $indexForShow);
     }
 
     private function replyUnit($replyData, $isFirst) {
@@ -523,34 +468,8 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         if ($pageid) {
             $mainPageName = $this->processPageID($pageid, $indexForShow);
         }
-        $time   = $replyData['time'];
-        $comment= $replyData['comment'];
-        $replier= $replyData['username'];
-        $hash   = $replyData['hash'];
 
-        print "
-<div class='paperclip__reply__unit'>
-    <hr class='paperclip__editlog__split $needHide'>
-    <div class='paperclip__reply__header'>
-        <div class='paperclip__reply__from'>
-            \"$replier\"的回复
-        </div>
-        <div class='paperclip__editlog__time'>
-            $time
-        </div>
-    </div>
-    <p class='paperclip__editlog__sum'>
-        $comment
-    </p>
-    <div class='paperclip__reply__footer'>
-        <a class='paperclip__editlog__link' href='/doku.php?id=$pageid&#comment_$hash' target='_blank'>查看详情</a>
-        <a class='paperclip__editlog__link' href='/doku.php?id=$pageid&do=show&comment=reply&cid=$hash#discussion__comment_form' target='_blank'>回复</a>
-        <div class='paperclip__editlog__index'>
-            索引：<span class='paperclip__link'>$indexForShow</span>
-        </div>
-    </div>
-</div>
-        ";
+        print adminReplylogUnit($needHide, $replyData, $indexForShow);
     }
 
     /**
@@ -606,8 +525,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         if ($content === $highlight) {
             $isSelected = 'paperclip__selfinfo__selectednav';
         }
-        print "<div class='paperclip__selfinfo__navbar $isSelected'>
-<a href= '$href'>$navbarContent</a></div>";
+        print commonNavbar($isSelected, $href, $navbarContent);
     }
 
     /**
@@ -617,12 +535,11 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     private function printSelfinfoHeader($highlight) {
         if ($highlight >= __CLIP__EDIT__ && $highlight <= __CLIP__SETTING__) {
             $hrefSetting = __HREFSETTING__;
-            print "<div class='paperclip__selfinfo__header'>";
+            print personalInfoNavbarHeader();
             $this->printNavbar(__CLIP__EDIT__, $highlight, "/doku.php?show={$hrefSetting[__CLIP__EDIT__]}&page=1&id=start");
             $this->printNavbar(__CLIP__COMMENT__, $highlight, "/doku.php?show={$hrefSetting[__CLIP__COMMENT__]}&page=1&id=start\"");
             $this->printNavbar(__CLIP__SETTING__, $highlight, "/doku.php?show={$hrefSetting[__CLIP__SETTING__]}&page=1&id=start\"");
-
-            print "</div>";
+            print commonDivEnd();
         }
     }
 
@@ -635,10 +552,10 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         if ($highlight >= __CLIP__TITLE__ && $highlight <= __CLIP__FULLTEXT__) {
             global $QUERY;
             $hrefSetting = __HREFSETTING__;
-            print "<div class='paperclip__selfinfo__header'>";
+            print personalInfoNavbarHeader();
             $this->printNavbar(__CLIP__TITLE__, $highlight, "/doku.php?q=$QUERY&show={$hrefSetting[__CLIP__TITLE__]}&page=1");
             $this->printNavbar(__CLIP__FULLTEXT__, $highlight, "/doku.php?q=$QUERY&show={$hrefSetting[__CLIP__FULLTEXT__]}&page=1");
-            print "</div>";
+            print commonDivEnd();
         }
     }
 
@@ -650,13 +567,11 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     private function printAdminHeader($highlight) {
         if ($highlight >= __CLIP__ALLEDIT__ && $highlight <= __CLIP__ADMIN__) {
             $hrefSetting = __HREFSETTING__;
-            print "<div class='paperclip__selfinfo__header'>";
+            print personalInfoNavbarHeader();
             $this->printNavbar(__CLIP__ALLEDIT__, $highlight, "/doku.php?show={$hrefSetting[__CLIP__ALLEDIT__]}&page=1");
             $this->printNavbar(__CLIP__ALLCOM__, $highlight, "/doku.php?show={$hrefSetting[__CLIP__ALLCOM__]}&page=1");
             $this->printNavbar(__CLIP__ADMIN__, $highlight, "/doku.php?show={$hrefSetting[__CLIP__ADMIN__]}&page=1");
-
-            print "</div>";
-
+            print commonDivEnd();
         }
     }
 
@@ -666,51 +581,14 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
      */
     private function printAdminSearchForm($clip) {
         global $_REQUEST;
-        $mchecked = '';
-        $nchecked = '';
-        $html = "<div id='adsearchbox'>
-                <form id='adminsearch_form' method='post' action=/doku.php?show=".__HREFSETTING__[$clip]." accept-charset='utf-8'>";
+        $mutechecked = '';
+        $nukechecked = '';
         if ($_REQUEST['identity'] == __MUTED__)
-            $mchecked = 'checked="checked"';
+            $mutechecked = 'checked="checked"';
         elseif ($_REQUEST['identity'] == __NUKED__)
-            $nchecked = 'checked="checked"';
+            $nukechecked = 'checked="checked"';
 
-        if ($clip == __CLIP__ALLEDIT__)
-            $html .= "<p>
-                        词　条：
-                        <input type='text' name='summary' value={$_REQUEST['summary']}>
-                      </p>";
-        elseif ($clip == __CLIP__ALLCOM__)
-            $html .= "<p>
-                        评　论：
-                        <input type='text' name='comment' value={$_REQUEST['comment']}>
-                      </p>";
-
-        $html .= "<p>
-                        用户名：
-                        <input type='text' name='username' value={$_REQUEST['username']}>
-                    </p>
-                    <p>
-                        用户ID：
-                        <input type='text' name='userid' value={$_REQUEST['userid']}>
-                    </p>
-                    <p>
-                        时　间：
-                        <input name='etime' class='flatpickr' type='text' placeholder='开始时间' title='开始时间' readonly='readonly' style='cursor:pointer; 'value='{$_REQUEST['etime']}'>
-                      -- 
-                        <input name='ltime' class='flatpickr' type='text' placeholder='结束时间' title='结束时间' readonly='readonly' style='cursor:pointer;' value='{$_REQUEST['ltime']}'>
-                    </p>
-                    <p> 
-                        <input type='radio' name='identity' value='all' checked='checked'>全部用户
-                        <input type='radio' name='identity' value='muted' {$mchecked}>禁言用户
-                        <input type='radio' name='identity' value='nuked' {$nchecked}>拉黑用户
-                    </p>
-                    <p>
-                        <input type='submit' name='admin_submit' value='搜索'>
-                    </p>";
-        $html .= "</form></div>";
-
-        print $html;
+        print adminSearchBox($clip, $mutechecked, $nukechecked);
     }
 
     /**
@@ -753,7 +631,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         }
 
         if ($statement->rowCount() === 0) {
-            echo '<br>您还没有编辑记录<br>';
+            echo adminNoEditLog();
         }
     }
 
@@ -780,126 +658,14 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         }
 
         if ($statement->rowCount() === 0) {
-            echo '<br>您还没有收到回复<br>';
+            echo adminNoReply();
         }
-
-
-
     }
 
     private function setting() {
         $this->printSelfinfoHeader(__CLIP__SETTING__);
-
-        global $USERINFO;
-        $username = $USERINFO['name'];
-        $mail = $USERINFO['mail'];
-        print
-        "
-        <div class='paperclip__settings'>
-        <div class='paperclip__settings__title'>个人信息</div>
-        <div class='paperclip__settings__info'>用户名：$username&nbsp|&nbsp登录邮箱：$mail</div>
-        <a href='/doku.php?do=profile' target='_blank' class='paperclip__settings__update'>前往更改</a>
-</div>
-        ";
+        print personalSetting();
     }
-
-    /**
-     * Print a new cell in the table
-     * @param $page
-     */
-    private function printOnePagenum ($page, $content, $additionalParam = []) {
-        $addiQuery = '';
-        foreach ($additionalParam as $param => $value) {
-            $addiQuery .= "&$param=$value";
-        }
-        print "<td class='paperclip__pagenum'><a href='/doku.php?show=$content&page=$page$addiQuery' class='paperclip__pagehref'>$page</a></td>";
-    }
-
-    private function printPresentPagenum ($page) {
-        print "<td class='paperclip__pagenum__nohref'>$page</td>";
-    }
-
-    /**
-     * Print the ... in the table
-     */
-    private function printEllipsis () {
-        print "<td class='paperclip__pagenum__nohref'>...</td>";
-    }
-
-    /**
-     * @param $start
-     * @param $end The range includes the end
-     */
-    private function printPageFromRange($start, $end, $content, $additionalParam = []) {
-        if ($start > $end) return;
-
-        for ($i = $start; $i <= $end; $i++) {
-            $this->printOnePagenum($i, $content, $additionalParam);
-        }
-    }
-
-    /**
-     * Print out a table to show the page number like:
-     * 1 ... 4 5 6 7 8 ... 100
-     *
-     * @param $sum total page number
-     * @param $page
-     * @param $content
-     */
-    private function paginationNumber($sum, $page, $content, $additionalParam = []) {
-        // check some exception
-        global $USERINFO, $conf;
-        if ($sum <= 0 || $page <= 0 || $sum < $page) {
-            echo '';
-        }
-        else {
-            print "<div class='paperclip__pagenav'>";
-            print "<table id='paperclip__pagetable'>";
-            print "<tr>";
-            //print left part
-            $left = $page - 1; // the left part of pagination list
-            if ($left <= 4) {
-                if ($left > 0) {
-                    $this->printPageFromRange(1, $left, $content, $additionalParam);
-                }
-            } else {
-                // The table should look like:
-                // 1 ... 4 5
-                $this->printOnePagenum(1, $content, $additionalParam);
-                $this->printEllipsis();
-                $this->printPageFromRange($left - 1, $left, $content, $additionalParam);
-            }
-            //print centre part
-            $this->printPresentPagenum($page);
-            //print right part
-            $right = $sum - $page;
-            if ($right <= 4) {
-                if ($right > 0) {
-                    $this->printPageFromRange($page + 1, $sum, $content, $additionalParam);
-                }
-            } else {
-                // The table should look like:
-                // 7 8 ... 10
-                $this->printPageFromRange($page + 1, $page + 2, $content, $additionalParam);
-                $this->printEllipsis();
-                $this->printOnePagenum($sum, $content, $additionalParam);
-            }
-            // print the input and jump button
-            print "
-            <td class='paperclip__pagejump'>
-            <form action='/doku.php' method='get'>
-            <input type='text' class='paperclip__pagejump__input' name='page' required>
-            <input type='hidden' name='show' value=$content>";
-            foreach ($additionalParam as $param => $value) {
-                print "<input type='hidden' name=$param value=$value>";
-            }
-            print "<input type='submit' class='paperclip__pagejump__button' value='跳转'>
-            </form>
-            </td>";
-            print "</tr></table></div>";
-        }
-    }
-
 
     /**
      *
@@ -911,39 +677,14 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
      * @param $html
      */
     private function showMeta($id, $countInText, $highlight, &$html) {
-        global $lang;
-
-        // Comment part of search title result and search fulltext result
-        $goldspanPrefix = "<span class='paperclip__link'>";
-        $spanSuffix = "</span>";
-
-        $html .= "<div class='paperclip__qtitle'>";
         $mtime = filemtime(wikiFN($id));
         $time = date_iso8601($mtime);
-        $wikiIndex = $id;
-        $wikiIndex = explode(':', $wikiIndex);
-        $pageTitle = array_pop($wikiIndex);
-        $wikiIndex = implode("$spanSuffix-$goldspanPrefix", $wikiIndex);
+        $passedLang = array(
+            'matches' => $this->getLang('matches'),
+            'index' => $this->getLang('index'),
+            'ellipsis' => $this->getLang('ellipsis'));
 
-        $wikiIndex = $goldspanPrefix.$wikiIndex.$spanSuffix;
-
-        // Title
-        $html .= "<a href='/doku.php?id=$id' target='_blank'>$pageTitle</a>";
-        // Last edittion time and index
-        $html .= "<div class='paperclip__searchmeta'>";
-        // Last modification time
-        if ($countInText > 0) {
-            $html .= "<span>{$countInText}{$this->getLang('matches')}</span>";
-        }
-        $html .= "<span class='paperclip__lastmod'>{$lang['lastmod']}{$time}</span>";
-        $html .= "<span>{$this->getLang('index')}{$wikiIndex}</span>";
-        $html .= "</div>";
-
-        // Snippet
-        $resultBody = ft_snippet($id, $highlight);
-        $html .= "<p>{$resultBody}{$this->getLang('ellipsis')}</p>";
-        $html .= "</div>";
-
+        $html .= searchMeta($id, $countInText, $highlight, $time, $passedLang);
     }
 
     /**
@@ -990,24 +731,19 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 
         $this->printSearchHeader(__CLIP__TITLE__);
 
-        $html = "";
-        $html .= "<div class='paperclip__qresult'>";
-        $html .= "<p class='paperclip__counter'>{$this->getLang('countPrefix')}{$counter}{$this->getLang('countSuffix')}</p>";
-
+        $html = searchResult($this->getLang('countPrefix'), $counter, $this->getLang('countSuffix'));
         foreach ($pageLookupResults as $id => $title) {
             $this->showMeta($id, 0, $highlight, $html);
         }
-
-        $html .= "</div>";
+        $html .= commonDivEnd();
         echo $html;
 
         $sum = ceil($counter / $this->editperpage);
-        $this->paginationNumber($sum, $pagenum, 'title', array('q' => $QUERY));
+        commonPaginationNumber($sum, $pagenum, 'title', array('q' => $QUERY));
 
     }
 
     /**
-     *
      * Display the content of page fulltext search result
      *
      * @param $fullTextResults
@@ -1028,52 +764,17 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 
         $this->printSearchHeader(__CLIP__FULLTEXT__);
 
-        $html = "";
-        $html .= "<div class='paperclip__qresult'>";
-        $html .= "<p class='paperclip__counter'>{$this->getLang('countPrefix')}{$counter}{$this->getLang('countSuffix')}</p>";
+        $html = searchResult($this->getLang('countPrefix'), $counter, $this->getLang('countSuffix'));
 
         foreach ($fullTextResults as $id => $countInText) {
             $this->showMeta($id, $countInText, $highlight, $html);
         }
 
-        $html .= "</div>";
+        $html .= commonDivEnd();
         echo $html;
 
         $sum = ceil($counter / $this->editperpage);
-        $this->paginationNumber($sum, $pagenum, 'fulltext', array('q' => $QUERY));
-    }
-
-    /**
-     * Get a form which can be used to adjust/refine the search
-     *
-     * @param string $query
-     *
-     * @return string
-     */
-    protected function getSearchFormHTML($query)
-    {
-        global $lang, $ID, $INPUT;
-
-        $searchForm = (new Form(['method' => 'get'], true))->addClass('search-results-form');
-        $searchForm->setHiddenField('do', 'search');
-        $searchForm->setHiddenField('id', $ID);
-        $searchForm->setHiddenField('sf', '1');
-        if ($INPUT->has('min')) {
-            $searchForm->setHiddenField('min', $INPUT->str('min'));
-        }
-        if ($INPUT->has('max')) {
-            $searchForm->setHiddenField('max', $INPUT->str('max'));
-        }
-        if ($INPUT->has('srt')) {
-            $searchForm->setHiddenField('srt', $INPUT->str('srt'));
-        }
-        $searchForm->addFieldsetOpen()->addClass('search-form');
-        $searchForm->addTextInput('q')->val($query)->useInput(false);
-        $searchForm->addButton('', $lang['btn_search'])->attr('type', 'submit');
-
-        $searchForm->addFieldsetClose();
-
-        return $searchForm->toHTML();
+        commonPaginationNumber($sum, $pagenum, 'fulltext', array('q' => $QUERY));
     }
 
     /**
@@ -1087,14 +788,9 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         $after = $INPUT->str('min');
         $before = $INPUT->str('max');
 
-        echo "<div class='paperclip__search'>";
-        echo "<div class='paperclip__srchhead'>";
-        echo "<div class='paperclip__srchrslt'>{$this->getLang('searchResult')}</div>";
-        echo "<div class='paperclip__floatright'>";
-        echo $this->getSearchFormHTML($QUERY);
-        echo "<p class='paperclip__srchhint'>{$this->getLang('searchHint')}</p></div>";
-        echo '</div>';
-
+        $searchResult = $this->getLang('searchResult');
+        $searchHint = $this->getLang('searchHint');
+        print searchHead($searchResult, $searchHint);
 
         if ($show === 'title' || !isset($show)) {
             // Display the result of title searching
@@ -1107,7 +803,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             $fullTextResults = ft_pageSearch($QUERY, $highlight, $INPUT->str('srt'), $after, $before);
             $this->showSearchOfFullText($fullTextResults, $highlight);
         }
-        echo '</div>';
+        echo commonDivEnd();
     }
 
     /**
@@ -1135,68 +831,44 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         global $INFO;
         $isRecordEditorAdmin = $this->checkIdentityIsAdmin($identity);
 
-        print "<div class='paperclip__adminProcess' >
-                    <span>{$this->getLang('id')}$id</span>
-                    <span>{$this->getLang('time')}$time</span>";
+        $idLang = $this->getLang('id');
+        $timeLang = $this->getLang('time');
+        print adminProcess($id, $idLang, $time, $timeLang);
+
         if($isRecordEditorAdmin) {
             print $this->getLang('cantban');
         } else {
-            print "<form  id='$id'>
-                        <select name='muteTime'>
-                            <option value='1'>禁言1天</option>
-                            <option value='7'>禁言7天</option>
-                            <option value='30'>禁言30天</option>
-                            <option value='0'>拉黑用户</option>
-                        </select>
-                        <input type='hidden' name='userID' value='$userID'>
-                        <input type='hidden' name='call' value='paperclip'>
-                        <input type='hidden' name='identity' value='{$INFO['client']}'>
-
-                        <input type='submit' value='{$this->getLang('process')}'>
-
-                    </form>";
-                  }
-        print "</div>";
+            print adminProcessForm($id, $userID, $this->getLang('process'));
+        }
+        print commonDivEnd();
     }
 
-    private function printUserInfo($realname, $editorid, $mailaddr, $identity) {
-        print "<div class='paperclip__editorInfo'>";
-        print "<span>{$this->getLang('editor')}$realname</span>";
-        print "<span>{$this->getLang('editorID')}$editorid</span>";
-        print "<span>{$this->getLang('mailaddr')}$mailaddr</span>";
-        print "</div>";
-
-        print "<div class='paperclip__userState'>";
-        print "<span>{$this->getLang('userIdentity')}$identity</span>";
-        print "</div>";
-
+    private function adminUnitlangs() {
+        return array(
+            'editor' => $this->getLang('editor'),
+            'editorID' => $this->getLang('editorID'),
+            'mailaddr' => $this->getLang('mailaddr'),
+            'userIdentity' => $this->getLang('userIdentity')
+        );
     }
 
     private function adminEditUnit($editData) {
-        $id = $editData['id'];
-        $time = $editData['time'];
-
-        print "<div class='paperclip__adminEditUnit'>";
-        print "<hr class='paperclip__editlog__split'>";
+        $langs = $this->adminUnitlangs();
+        print $this->adminEditUnit();
         $this->printAdminProcess($editData['editlogid'], $editData['time'], $editData['editorid'], $editData['identity']);
-        $this->printUserInfo($editData['realname'], $editData['editorid'], $editData['mailaddr'], $editData['identity']);
+        adminUserInfo($editData['realname'], $editData['editorid'], $editData['mailaddr'], $editData['identity'], $langs);
         $this->editUnit($editData, true);
-
-
-        print "</div>";
+        print commonDivEnd();
 
     }
 
     private function adminCommentUnit($commentData) {
-
-        print "<div class='paperclip__adminEditUnit'>";
-        print "<hr class='paperclip__editlog__split'>";
+        $langs = $this->adminUnitlangs();
+        print $this->adminEditUnit();
         $this->printAdminProcess($commentData['hash'], $commentData['time'], $commentData['userid'], $commentData['identity']);
-        $this->printUserInfo($commentData['realname'], $commentData['userid'], $commentData['mailaddr'], $commentData['identity']);
+        adminUserInfo($commentData['realname'], $commentData['userid'], $commentData['mailaddr'], $commentData['identity'], $langs);
         $this->editUnit($commentData, true);
-
-
-        print "</div>";
+        print commonDivEnd();
     }
 
     /**
@@ -1211,16 +883,21 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         return ($show === 'alledit' || $show === 'allcom' || $show === 'admin');
     }
 
+    private function checkCondition(&$getConditions) {
+        if ($getConditions) {
+            $getConditions .= "and ";
+        }
+        return $getConditions;
+    }
+
     private function showAdminContent() {
         $show = $_GET['show'];
         $pagenum = $_GET['page'];
         if (!isset($pagenum)) {
             $pagenum = 1;
         }
-        global $ACT, $INFO;
+        global $INFO;
 
-        // Need something to check the identity here
-        // Need Fix !
         if(!$INFO['isadmin']) return;
 
         if ($show === 'admin') {
@@ -1229,7 +906,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             $admin->show();
         }
         else {
-            echo "<div class='paperclip__admin'>";
+            echo adminHead();
             $getConditions = '';
             $username = $_REQUEST['username'];
             $summary = $_REQUEST['summary'];
@@ -1241,33 +918,27 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             //search conditions
             
             if ($userid) {
-                if ($getConditions) {
-                    $getConditions .= "and ";
-                }
+                $this->checkcondition($getConditions);
                 $getConditions .= __USERTABLEALIAS__.".".__CONDITIONS__['conUserid']." = $userid ";
             }
+
+
             if ($etime && $ltime) {
-                if ($getConditions) {
-                    $getConditions .= "and ";
-                }
+                $this->checkcondition($getConditions);
                 $getConditions .= __CONDITIONS__['conTime']." >= '{$etime}' and ".__CONDITIONS__['conTime']." <= '{$ltime}' ";
 
             } elseif ($etime) {
-                if ($getConditions) {
-                    $getConditions .= "and ";
-                }
+                $this->checkcondition($getConditions);
                 $getConditions .= __CONDITIONS__['conTime']." >= '{$etime}' ";
 
             } elseif ($ltime) {
-                if ($getConditions) {
-                    $getConditions .= "and ";
-                }
+                $this->checkcondition($getConditions);
                 $getConditions .= __CONDITIONS__['conTime']." <= '{$ltime}' ";
             }
+
+
             if ($identity && $identity != 'all') {
-                if ($getConditions) {
-                    $getConditions .= "and ";
-                }
+                $this->checkcondition($getConditions);
                 $getConditions .= __CONDITIONS__['conIdentity']." like '{$identity}' ";
             }
 
@@ -1279,15 +950,11 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
                 $this->printAdminSearchForm(__CLIP__ALLEDIT__);
                 
                 if ($summary) {
-                    if ($getConditions){
-                        $getConditions .= "and ";
-                    }
+                    $this->checkcondition($getConditions);
                     $getConditions .= __CONDITIONS__['conSummary']." like '%{$summary}%' ";
                 }
                 if ($username) {
-                    if ($getConditions) {
-                        $getConditions .= "and ";
-                    }
+                    $this->checkcondition($getConditions);
                     $getConditions .= __CONDITIONS__['conEditor']." like '%{$username}%' ";
 
                 }
@@ -1304,7 +971,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
                 }
 
                 if ($statement->rowCount() === 0) {
-                    echo '<br>还没有编辑记录<br>';
+                    echo adminNoEditLog();
                 }
                 $sum = ceil($countFullEditlog / $this->editperpage);
                 $additionalParam = array(
@@ -1315,7 +982,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
                     'ltime' => $ltime,
                     'identity' => $identity
                 ); 
-                $this->paginationNumber($sum, $pagenum, 'alledit', $additionalParam);
+                commonPaginationNumber($sum, $pagenum, 'alledit', $additionalParam);
 
             } else if ($show === 'allcom') {
                 // Showing the comment history for admins
@@ -1351,7 +1018,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
                 }
 
                 if ($statement->rowCount() === 0) {
-                    echo '<br>还没有编辑记录<br>';
+                    echo adminNoEditLog();
                 }
 
                 $sum = ceil($countFullEditlog / $this->editperpage);
@@ -1363,14 +1030,82 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
                     'ltime' => $ltime,
                     'identity' => $identity
                 ); 
-                $this->paginationNumber($sum, $pagenum, 'allcom', $additionalParam);
+                commonPaginationNumber($sum, $pagenum, 'allcom', $additionalParam);
 
             }
 
-            echo "</div>";
+            echo commonDivEnd();
 
         }
 
+    }
+
+    private function printEditPageModification() {
+        global $ID;
+        $indexForShow = '';
+        $this->processPageID($ID, $indexForShow);
+        $indexArr = explode(':', $ID);
+        $title = $indexArr[count($indexArr)-1];
+        $editindex = $this->getLang('editindex');
+        $editheader = $this->getLang('editheader');
+
+        print editHeader($editheader, $editindex, $indexForShow, $title);
+    }
+
+    private function isPersonalCenter($show) {
+       return ($show === 'editlog' || $show === 'comment' || $show === 'setting');
+    }
+
+    private function personalInfoCentre($show, $event) {
+        global $INFO;
+        $pagenum = $_GET['page'];
+        $username = $INFO['client'];
+        print personalInfo();
+
+        if ($show === 'editlog') {
+            $event->data = '';
+            // A little bit wired here, need fix
+            $editRecordCount = $this->countEditForName($username);
+            $sum = ceil($editRecordCount / $this->editperpage);
+
+            if ($show === 'editlog') {
+                $pagenum = $this->checkPagenum($pagenum, $editRecordCount, $username);
+                $this->editlog($pagenum);
+                commonPaginationNumber($sum, $pagenum, 'editlog');
+            } else {
+                $this->editlog(1);
+                commonPaginationNumber($sum, 1, 'editlog');
+            }
+
+        } else if ($show === 'comment') {
+            $replyRecordCount = $this->countReplyForName($username);
+            $sum = ceil($replyRecordCount / $this->replyperpage);
+
+            $pagenum = $this->checkPagenum($pagenum, $replyRecordCount, $username);
+            // out putting
+            $this->comment($pagenum);
+            commonPaginationNumber($sum, $pagenum, 'comment');
+        } else if ($show === 'setting') {
+            $this->setting();
+        }
+        print commonDivEnd();
+    }
+
+    /**
+     * Check if this is a binding existing account redirect
+     */
+    private function isBind() {
+        $bind = $_GET['bind'];
+        return ($bind === 'ext');
+    }
+
+    private function bindExistingAccount(Doku_Event $event) {
+        $slogan = $this->getLang('bindSlogan');
+        $bind = $this->getLang('bind');
+        $skip = $this->getLang('skip');
+        loginBindWechatForm($slogan, $bind, $skip);
+
+        $event->preventDefault();
     }
 
     /**
@@ -1384,64 +1119,24 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
     public function handle_tpl_content_display(Doku_Event $event, $param)
     {
         // Dispatch the customized behavior based on _GET
-        global $_GET, $ACT, $ID;
+        global $_GET, $ACT;
         $show = $_GET['show'];
-        global $USERINFO, $conf, $QUERY, $INFO;
-        $username = $INFO['client'];
-        $pagenum = $_GET['page'];
+        global $QUERY;
 
         if ($ACT == 'edit' || $ACT == 'preview') {
-            $indexForShow = '';
-            $this->processPageID($ID, $indexForShow);
-            $indexArr = explode(':', $ID);
-            $title = $indexArr[count($indexArr)-1];
-            print "<div class='paperclip__edit__header'>{$this->getLang('editheader')}
-                        <div class='paperclip__editlog__index'>
-                            {$this->getLang('editindex')}：<span class='paperclip__link'>$indexForShow</span>
-                        </div>
-                    </div>
-                    <div class='paperclip__edittitle'>$title
-                    </div>
-
-                    ";
+            $this->printEditPageModification();
         }
-        if ($show === 'editlog') {
-            $event->data = '';
-            // A little bit wired here, need fix
-            $editRecordCount = $this->countEditForName($username);
-            $sum = ceil($editRecordCount / $this->editperpage);
-
-            print "<div class='paperclip__selfinfo'>";
-            if ($show === 'editlog') {
-                $pagenum = $this->checkPagenum($pagenum, $editRecordCount, $username);
-                $this->editlog($pagenum);
-                $this->paginationNumber($sum, $pagenum, 'editlog');
-            } else {
-                $this->editlog(1);
-                $this->paginationNumber($sum, 1, 'editlog');
-            }
-            print "</div>";
-
-        } else if ($show === 'comment') {
-            print "<div class='paperclip__selfinfo'>";
-            $replyRecordCount = $this->countReplyForName($username);
-            $sum = ceil($replyRecordCount / $this->replyperpage);
-
-            $pagenum = $this->checkPagenum($pagenum, $replyRecordCount, $username);
-            // out putting
-            $this->comment($pagenum);
-            $this->paginationNumber($sum, $pagenum, 'comment');
-            print "</div>";
-        } else if ($show === 'setting') {
-            print "<div class='paperclip__selfinfo'>";
-            $this->setting();
-            print "</div>";
+        elseif ($this->isPersonalCenter($show)) {
+            $this->personalInfoCentre($show, $event);
         }
-        else if ($QUERY) {
+        elseif ($QUERY) {
             $this->showSearchResult();
         }
-        else if ($this->isAdmin($show, $ACT)) {
+        elseif ($this->isAdmin($show, $ACT)) {
             $this->showAdminContent();
+        }
+        elseif ($this->isBind()) {
+            $this->bindExistingAccount($event);
         }
     }
 
@@ -1450,6 +1145,46 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         if($event->data['view'] != 'user') return;
     }
 
+    /**
+     * Verify user's mail
+     * User click to here from links in email
+     *
+     * Author: Max Qian
+     * Modified by Mark T. Nie
+     *
+     * @param $mail
+     * @param $code
+     */
+    private function mailVerification($mail, $code) {
+        // retrieve data
+        $result = $this->dao->getUserDataByEmailCore($mail);
+
+        if ($result === false) { // invalid $mail
+
+            header('Location: doku.php?id=start&do=register');
+        } else if ($result['verifycode'] !== $code) { //invalid $verifycode
+
+            header('Location: doku.php');
+        } else { // valid input
+
+            function filter_cb( $var ) {
+                global $conf;
+                return $var !== $conf['defaultgroup'];
+            }
+
+            // modify grps
+            $result['grps'][] = 'user';
+
+            // filter @ALL (default group)
+            $grps =  implode(",", array_filter($result['grps'], "filter_cb"));
+
+            // modify db
+            $this->dao->setUserGroup($result['id'], $grps);
+
+            //redirect
+            header('Location: doku.php');
+        }
+    }
     /**
      * Author: Max Qian
      * Modified by Mark T. Nie
@@ -1468,58 +1203,29 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 
       // verification code
       if ($code && $mail) {
-
-        // retrieve data
-        $result = $this->dao->getUserDataByEmailCore($mail);
-
-        if ($result === false) { // invalid $mail
-
-          header('Location: doku.php?id=start&do=register');
-        } else if ($result['verifycode'] !== $code) { //invalid $verifycode
-
-          header('Location: doku.php');
-        } else { // valid input
-
-          function filter_cb( $var ) {
-            global $conf;
-            return $var !== $conf['defaultgroup'];
-          }
-
-          // modify grps
-          $result['grps'][] = 'user';
-
-          // filter @ALL (default group)
-          $grps =  implode(",", array_filter($result['grps'], "filter_cb"));
-
-          // modify db
-          $this->dao->setUserGroup($result['id'], $grps);
-
-          //redirect
-          header('Location: doku.php');
-        }
+          $this->mailVerification($mail, $code);
       }
     }
 
+    /**
+     * Inject some extra UI for external login in the login form
+     *
+     * @return string
+     */
     private function externalLoginUI() {
-        // Make up the link
-        $hlp = $this->loadHelper('clipauth_paperclipHelper');
-
-        $wechatLink = $hlp->getAuthURL();
-
-            return "
-    <div class='paperclip__extlogin'>
-        <div class='paperclip__exthead'>
-            <div class='paperclip__extlgintitle'>
-             {$this->getLang('extlogin')}
-            </div> 
-        </div>
-        <div>
-            <div class='paperclip__divhr'></div>
-        </div>
-        <div class='paperclip__extlkgrp'>
-            <a class='paperclip__extlink' target='_blank' id='extlink__wechat' href={$wechatLink}>{$this->getLang('wechatlogin')}</a>
-        </div>
-    </div>";
+        $bind = $_GET['bind'];
+        if ($bind) {
+            // Should not add login form
+            // when login form is shown at binding page
+            return '';
+        } else {
+            // Make up the link
+            $hlp = $this->loadHelper('clipauth_paperclipHelper');
+            $wechatLink = $hlp->getAuthURL();
+            $extloginLang = $this->getLang('extlogin');
+            $wechatloginLang = $this->getLang('wechatlogin');
+            return loginExternalUI($extloginLang, $wechatLink, $wechatloginLang);
+        }
     }
 
     /**
