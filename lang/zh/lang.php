@@ -28,9 +28,30 @@ $lang['editindex'] = '索引';
 $lang['extlogin'] = '第三方登录';
 $lang['wechatlogin'] = '微信登录';
 $lang['weibologin'] = '微博登录';
+<<<<<<< HEAD
 $lang['bindSlogan'] = '绑定现有的账号';
 $lang['bind'] = '绑定';
 $lang['skip'] = '跳过';
 $lang['alreadyBind'] = '该微信账户已经被绑定';
 $lang['noSpaceToBind'] ='该账户已绑定过微信';
 $lang['noExtAccount'] = '没有可以用来绑定的账户，请重试';
+=======
+//errmsg
+$lang['inviteEmpty'] = '邀请码不能为空';
+$lang['inviteLength'] = '邀请码长度不对';
+$lang['inviteNull'] = '邀请码不存在';
+$lang['inviteInvalid'] = '邀请码已失效';
+$lang['usernameEmpty'] = '用户名不能为空';
+$lang['usernameExist'] = '用户名已存在';
+$lang['usernameBad'] = '包含非法字符';
+$lang['usernameLength'] = '用户名长度不能超过16个字符';
+$lang['emailInvalid'] = '邮箱格式不正确';
+$lang['emailEmpty'] = '邮箱不能为空';
+$lang['emailExist'] = '该邮箱已注册';
+$lang['passEmpty'] = '密码不能为空';
+$lang['passchkEmpty'] = '确认密码不能为空';
+$lang['passchkDiff'] = '两次密码输入不一致';
+$lang['fullnameEmpty'] = '全名不能为空';
+$lang['passchkLength'] = '全名长度不能超过16位';
+
+>>>>>>> 2b9f7d22a36e45f5edba3815691318c3c30998d5
