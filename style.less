@@ -403,6 +403,11 @@ blockquote {
       height: 0.883rem;
     }
   }
+  .toolbutton:focus,
+  button[type=submit]:focus{
+    outline: none;
+    border: none;
+  }
   .toolbar {
     border-top: 0.167rem solid @borderline;
     border-bottom: @blineheight solid @borderline;
@@ -480,6 +485,11 @@ blockquote {
 .mode_preview {
   .toolbutton {
     background-color: white;
+    border: none;
+  }
+  .toolbutton:focus,
+  button[type=submit]:focus{
+    outline: none;
     border: none;
   }
   .toolbar {
