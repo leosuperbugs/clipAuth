@@ -613,11 +613,6 @@ function loginExternalUI($extloginLang, $wechatLink, $wechatloginLang): string {
             <div class='paperclip__extlgintitle'>
              {$extloginLang}
             </div> 
-        </div>
-        <div>
-            <div class='paperclip__divhr'></div>
-        </div>
-        <div class='paperclip__extlkgrp'>
             <a class='paperclip__extlink' target='_blank' id='extlink__wechat' href={$wechatLink}>
                 {$wechatloginLang}
             </a>

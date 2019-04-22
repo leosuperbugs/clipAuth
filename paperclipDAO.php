@@ -427,7 +427,8 @@ class paperclipDAO
                 username,
                 realname,
                 mailaddr,
-                identity
+                identity,
+		verifycode
                 from $userinfo 
                 where mailaddr = :email";
 
@@ -998,8 +999,8 @@ class paperclipDAO
             'mail' => $result['mailaddr'],
             'id'   => $result['id'],
             'grps' => array_filter(explode(',', $result['identity'])),
-            'verifycode' => $result['verifycode'],
-            'resetpasscode' => $result['resetpasscode']
+            'verifycode' => $result['verifycode']
+//            'resetpasscode' => $result['resetpasscode']
         ];
     }
 

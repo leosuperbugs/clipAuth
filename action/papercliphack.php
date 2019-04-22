@@ -854,9 +854,9 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 
     private function adminEditUnit($editData) {
         $langs = $this->adminUnitlangs();
-        print $this->adminEditUnit();
+        print adminEditUnit();
         $this->printAdminProcess($editData['editlogid'], $editData['time'], $editData['editorid'], $editData['identity']);
-        adminUserInfo($editData['realname'], $editData['editorid'], $editData['mailaddr'], $editData['identity'], $langs);
+        print adminUserInfo($editData['realname'], $editData['editorid'], $editData['mailaddr'], $editData['identity'], $langs);
         $this->editUnit($editData, true);
         print commonDivEnd();
 
@@ -866,7 +866,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         $langs = $this->adminUnitlangs();
         print $this->adminEditUnit();
         $this->printAdminProcess($commentData['hash'], $commentData['time'], $commentData['userid'], $commentData['identity']);
-        adminUserInfo($commentData['realname'], $commentData['userid'], $commentData['mailaddr'], $commentData['identity'], $langs);
+        print adminUserInfo($commentData['realname'], $commentData['userid'], $commentData['mailaddr'], $commentData['identity'], $langs);
         $this->editUnit($commentData, true);
         print commonDivEnd();
     }

@@ -273,29 +273,28 @@ class auth_plugin_clipauth_paperclipAuth extends DokuWiki_Auth_Plugin
             }
         }
 
-        if (empty($user)) {
-            // do the checking here
-            $isExtLogin = $_GET['ext'];
-            // login
-            if ($isExtLogin) {
-                // External login
-                // Import helper
-                $hlp = $this->loadHelper('clipauth_paperclipHelper');
+        // not using cookie
+        // or cookies not in database
+        $isExtLogin = $_GET['ext'];
+        // trying to do external login
+        if (empty($user) && $isExtLogin) {
+            // External login
+            // Import helper
+            $hlp = $this->loadHelper('clipauth_paperclipHelper');
 
-                // Handle the wechat login
-                if ($isExtLogin === $this->getConf('wechat')) {
-                    $code = $_GET['code'];
+            // Handle the wechat login
+            if ($isExtLogin === $this->getConf('wechat')) {
+                // Varify the session
+                // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                // Should be enabled in the future
+                // Error here, use Redis instead!
 
-                    // Varify the session
-                    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                    // Should be enabled in the future
-                    // Error here, use Redis instead!
-//                if (empty($_GET['state']) || ($_GET['state'] !== rtrim($_SESSION['oauth2state'], '#wechat_redirect'))) {
-//
-//                    unset($_SESSION['oauth2state']);
-//                    exit('Invalid state');
-//
-//               }
+                //                if (empty($_GET['state']) || ($_GET['state'] !== rtrim($_SESSION['oauth2state'], '#wechat_redirect'))) {
+                //
+                //                    unset($_SESSION['oauth2state']);
+                //                    exit('Invalid state');
+                //
+                //                }
 
                 // Get user data from wechat
                 // First, get access token from code
