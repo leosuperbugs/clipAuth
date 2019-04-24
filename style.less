@@ -9,6 +9,7 @@
 @barspacing :2.292rem;
 @top_bottom_distance :6.667rem;
 @inputwidth: 30vw;
+@clipbond: 8vw;
 
 
 .paperclip__selfinfo {
@@ -394,34 +395,44 @@ blockquote {
   font-weight: bold;
 }
 
-.mode_edit {
+.mode_edit,
+.mode_preview {
   .toolbutton {
-    background-color: @clipwhite;
-    border: none;
     margin-left: 4.6rem;
     img {
       height: 0.883rem;
     }
+
+    background-color: @clipwhite;
+    border: none;
   }
+
   .toolbutton:focus,
   button[type=submit]:focus{
     outline: none;
     border: none;
   }
+
   .toolbar {
     position: sticky;
     top: 0;
+    min-width: 100vw - 2 * @clipbond;
     background-color: white;
 
     border-top: 0.167rem solid @borderline;
     border-bottom: @blineheight solid @borderline;
   }
+
   .tool__bar {
     margin-left: -2.5rem;
     margin-bottom: 1.625rem;
     margin-top: 1.583rem;
   }
+
   #wiki__text {
+    padding: 0.5rem;
+    background: __paperclip__tocgrey__;
+
     font-size: 1rem;
     border: none;
     resize: none;
@@ -429,22 +440,27 @@ blockquote {
     overflow: hidden;
     line-height: 1.667rem;
   }
+
   .editBar {
     padding-top: @barspacing;
     border-top: @blineheight solid @borderline;
     margin-top: 0.948rem;
   }
+
   #dw__editform {
     margin-top: 1.958rem;
   }
+
   .editButtons {
     margin-left: 3.335rem;
     margin-top: @barspacing;
   }
+
   .summary {
     margin-top: @barspacing;
     margin-left: 1.569rem;
   }
+
   #size__ctl {
     display: none;
   }
@@ -458,6 +474,7 @@ blockquote {
     color: __paperclip__gold__;
     background-color: transparent;
   }
+
   input[id=minoredit] {
     margin-left: 4.26rem;
     width: 0.6875rem;
@@ -468,9 +485,11 @@ blockquote {
     border-radius: 0.125rem;
     outline: none;
   }
+
   input[id=minoredit]:checked {
     background: url("/lib/plugins/clipauth/images/right.jpg")no-repeat center;
   }
+
   input[id=edit__summary] {
     width: 16rem;
     border: none;
@@ -486,98 +505,10 @@ blockquote {
     }
   }
 }
-.mode_preview {
-  .toolbutton {
-    background-color: white;
-    border: none;
-  }
-  .toolbutton:focus,
-  button[type=submit]:focus{
-    outline: none;
-    border: none;
-  }
-  .toolbar {
-    position: sticky;
-    top: 0;
-    background-color: white;
 
-    border-top: 0.167rem solid @borderline;
-    border-bottom: @blineheight solid @borderline;
-  }
-  .tool__bar {
-    margin-left: -2.5rem;
-    margin-bottom: 1.625rem;
-    margin-top: 1.583rem;
-  }
-  .toolbutton {
-    margin-left: 4.6rem;
-    img {
-      height: 0.883rem;
-    }
-  }
-  #wiki__text {
-    font-size: 1rem;
-    border: none;
-    resize: none;
-    outline: none;
-    overflow: hidden;
-    line-height: 1.667rem;
-  }
-  .editBar {
-    padding-top: @barspacing;
-    border-top: @blineheight solid @borderline;
-    margin-top: 0.948rem;
-  }
-  #dw__editform {
-    margin-top: 1.958rem;
-  }
-  .editButtons {
-    margin-left: 3.335rem;
-    margin-top: @barspacing;
-  }
-  .summary {
-    margin-top: @barspacing;
-    margin-left: 1.569rem;
-  }
-  #size__ctl {
-    display: none;
-  }
-  button[type=submit] {
-    margin-right: 3.175rem;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    border: none;
-    text-decoration: underline;
-    color: __paperclip__gold__;
-    background-color: transparent;
-  }
-  input[id=minoredit] {
-    margin-left: 4.26rem;
-    width: 0.6875rem;
-    height: 0.6875rem;
-    background-color: @clipwhite;
-    -webkit-appearance:none;
-    border: 0.0625rem solid @borderline;
-    border-radius: 0.125rem;
-    outline: none;
-  }
-  input[id=minoredit]:checked {
-    background: url("/lib/plugins/clipauth/images/right.jpg")no-repeat center;
-  }
-  input[id=edit__summary] {
-    width: 16rem;
-    border: none;
-    outline: none;
-    border-bottom: 0.0283rem solid @clipblack;
-  }
+.mode_preview {
   .license {
-    margin-top: 4rem;
     margin-bottom: 2rem;
-    color: @clipgray;
-    a {
-      color: __paperclip__gold__;
-    }
   }
 }
 
