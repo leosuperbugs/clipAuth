@@ -427,7 +427,8 @@ class paperclipDAO
                 username,
                 realname,
                 mailaddr,
-                identity
+                identity,
+		verifycode
                 from $userinfo 
                 where mailaddr = :email";
 
@@ -902,7 +903,7 @@ class paperclipDAO
 
     public function setUserGroup($id, $newGroup) {
         try {
-            $sql = "update ".$this->settings['usersinfo'] . " set identity=:grps, verifycode=NULL, resetpasscode=NULL where id=:id";
+            $sql = "update ".$this->settings['usersinfo'] . " set identity=:grps, verifycode=NULL where id=:id";
 
             $statement = $this->pdo->prepare($sql);
             $statement->bindValue(':grps', $newGroup);
@@ -998,8 +999,8 @@ class paperclipDAO
             'mail' => $result['mailaddr'],
             'id'   => $result['id'],
             'grps' => array_filter(explode(',', $result['identity'])),
-            'verifycode' => $result['verifycode'],
-            'resetpasscode' => $result['resetpasscode']
+            'verifycode' => $result['verifycode']
+//            'resetpasscode' => $result['resetpasscode']
         ];
     }
 

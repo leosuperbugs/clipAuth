@@ -297,7 +297,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             $event->preventDefault();
             // Still need to mute the
 
-        } elseif ($_POST['call']=='clip_submit') {
+        } elseif ($_POST['call']==='clip_submit') {
             global $_REQUEST;
             $editcontent = $_REQUEST['wikitext'];
             $res = $this->contentFilter($editcontent);
@@ -341,6 +341,11 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             $count = $this->dao->getEditorNames($editorList);
 
             echo entryEditorCredit($editorTitle, $count, $editorList);
+
+            // This part is to add a link of reverse right after editor names
+            echo entryRevision();
+            echo tpl_actionlink('revisions', '', '', '',true);
+            echo commonDivEnd();
         }
     }
     /**
@@ -854,9 +859,9 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
 
     private function adminEditUnit($editData) {
         $langs = $this->adminUnitlangs();
-        print $this->adminEditUnit();
+        print adminEditUnit();
         $this->printAdminProcess($editData['editlogid'], $editData['time'], $editData['editorid'], $editData['identity']);
-        adminUserInfo($editData['realname'], $editData['editorid'], $editData['mailaddr'], $editData['identity'], $langs);
+        print adminUserInfo($editData['realname'], $editData['editorid'], $editData['mailaddr'], $editData['identity'], $langs);
         $this->editUnit($editData, true);
         print commonDivEnd();
 
@@ -866,7 +871,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
         $langs = $this->adminUnitlangs();
         print $this->adminEditUnit();
         $this->printAdminProcess($commentData['hash'], $commentData['time'], $commentData['userid'], $commentData['identity']);
-        adminUserInfo($commentData['realname'], $commentData['userid'], $commentData['mailaddr'], $commentData['identity'], $langs);
+        print adminUserInfo($commentData['realname'], $commentData['userid'], $commentData['mailaddr'], $commentData['identity'], $langs);
         $this->editUnit($commentData, true);
         print commonDivEnd();
     }
@@ -1263,6 +1268,7 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
                                 return true;
                             else
                                 return false;
+	    
                         }
                     }
                 }

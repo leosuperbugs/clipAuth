@@ -20,12 +20,14 @@ jQuery( document ).ready(function($) {
                 type:"POST",
                 data: form.serialize(),
                 success:function(msg){
+		console.log(msg);
                     var reg = /true/;
                     res = msg.match(reg);                    
                 }
         });
         if(!res){ 
             swal('编辑失败', "评论含有敏感词", "error");
+            console.log('failed aliyun ajax');
             return false; 
         }else{
             $("#dw__editform").submit();

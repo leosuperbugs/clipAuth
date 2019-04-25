@@ -298,6 +298,10 @@ function entryEditorCredit($editorTitle, $count, $editorList): string {
             <p>$editorList</p>";
 }
 
+function entryRevision() {
+    return "<div class='paperclip__revision'>";
+}
+
 
 
 // Personal
@@ -355,7 +359,7 @@ function adminHead(): string {
  * @return string
  */
 function adminPageidGlue(): string {
-    return '</span>-<span class="paperclip__link">';
+    return '</span>-<span class="paperclip__index">';
 }
 
 /**
@@ -391,7 +395,7 @@ function adminEditlogUnit($needHide, $mainPageName, $editData, $indexForShow): s
         <a class='paperclip__editlog__link' href='/doku.php?id=$pageid&do=edit' target='_blank'>继续编辑</a>
         <a class='paperclip__editlog__link' href='/doku.php?id=$pageid' target='_blank'>查看当前条目</a>
         <div class='paperclip__editlog__index'>
-            索引：<span class='paperclip__link'>$indexForShow</span>
+            索引：<span class='paperclip__index'>$indexForShow</span>
         </div>
     </div>
 </div>";
@@ -613,11 +617,6 @@ function loginExternalUI($extloginLang, $wechatLink, $wechatloginLang): string {
             <div class='paperclip__extlgintitle'>
              {$extloginLang}
             </div> 
-        </div>
-        <div>
-            <div class='paperclip__divhr'></div>
-        </div>
-        <div class='paperclip__extlkgrp'>
             <a class='paperclip__extlink' target='_blank' id='extlink__wechat' href={$wechatLink}>
                 {$wechatloginLang}
             </a>

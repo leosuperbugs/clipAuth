@@ -4,8 +4,12 @@
 .idea/misc.xml
 .idea/modules.xml
 .idea/workspace.xml
+.idea/
+conf/default.php
+conf/metadata.php
 .idea/*
 settings.php
+invite/insertSQL.sh
 _test/
 *.DS_STORE
 aliyun.ak.ini
