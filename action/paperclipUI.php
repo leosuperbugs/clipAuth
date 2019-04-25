@@ -298,6 +298,10 @@ function entryEditorCredit($editorTitle, $count, $editorList): string {
             <p>$editorList</p>";
 }
 
+function entryRevision() {
+    return "<div class='paperclip__revision'>";
+}
+
 
 
 // Personal

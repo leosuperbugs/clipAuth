@@ -341,6 +341,11 @@ class action_plugin_clipauth_papercliphack extends DokuWiki_Action_Plugin
             $count = $this->dao->getEditorNames($editorList);
 
             echo entryEditorCredit($editorTitle, $count, $editorList);
+
+            // This part is to add a link of reverse right after editor names
+            echo entryRevision();
+            echo tpl_actionlink('revisions', '', '', '',true);
+            echo commonDivEnd();
         }
     }
     /**
